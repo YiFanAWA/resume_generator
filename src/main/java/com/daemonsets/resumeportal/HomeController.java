@@ -1,5 +1,6 @@
 package com.daemonsets.resumeportal;
 
+import com.daemonsets.resumeportal.models.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,11 +23,64 @@ public class HomeController {
     @Autowired
     UserProfileRepository userProfileRepository;
 
+    @Autowired
+    UserRepository userRepository;
     @GetMapping("/")
     public String home() {
         return "index";
     }
+    @GetMapping("/register")
+    public String registerPage() {
+        return "register";
+    }
 
+    @PostMapping("/register")
+    public String registerUser(@RequestParam String userName,
+                               @RequestParam String password,
+                               @RequestParam String confirmPassword,
+                               Model model) {
+
+        if (userName == null || userName.trim().isEmpty()) {
+            model.addAttribute("error", "Username cannot be empty");
+            return "register";
+        }
+
+        if (password == null || password.length() < 4) {
+            model.addAttribute("error", "Password must be at least 4 characters long");
+            return "register";
+        }
+
+        if (!password.equals(confirmPassword)) {
+            model.addAttribute("error", "Passwords do not match");
+            return "register";
+        }
+
+        Optional<User> existingUser = userRepository.findByUserName(userName);
+        if (existingUser.isPresent()) {
+            model.addAttribute("error", "Username already exists");
+            return "register";
+        }
+
+        User newUser = new User();
+        newUser.setUserName(userName);
+        newUser.setPassword(password);
+        newUser.setActive(true);
+        newUser.setRoles("USER");
+
+        userRepository.save(newUser);
+
+        UserProfile userProfile = new UserProfile();
+        userProfile.setUserName(userName);
+        userProfile.setTheme(1);
+        userProfile.setJobs(new ArrayList<>());
+        userProfile.setEducations(new ArrayList<>());
+        userProfile.setSkills(new ArrayList<>());
+
+        userProfileRepository.save(userProfile);
+
+        model.addAttribute("success", "Registration successful! Please login.");
+        return "register";
+    }
     @GetMapping("/edit")
     public String edit(Model model, Principal principal, @RequestParam(required = false) String add) {
         String userId = principal.getName();

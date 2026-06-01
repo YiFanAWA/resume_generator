@@ -25,11 +25,12 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         http.authorizeRequests()
                 .antMatchers("/edit").authenticated()
-                .antMatchers("/*").permitAll()
+                .antMatchers("/", "/register", "/profile-templates/**", "/static/**").permitAll()
+                .anyRequest().authenticated()
                 .and().formLogin();
     }
 
-    @Bean
+        @Bean
     public PasswordEncoder getPasswordEncoder() {
         return NoOpPasswordEncoder.getInstance();
     }
