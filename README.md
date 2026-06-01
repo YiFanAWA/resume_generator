@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Resume-Generator
 
  Resume-generator is a java spring-boot and thyme-leaf based web application that allows you to create HTML resumes easily. The application allows you to choose from 3 different themes when creating/ editing a resume. 
@@ -50,3 +51,7 @@
 
 ![screenshot1](https://raw.githubusercontent.com/Damans227/Resume-Generator/main/screenshots/resume-generator.gif)
 
+=======
+# resume_generator
+java_project 111
+>>>>>>> 309a755de46342945e343da14428956896145dc0
