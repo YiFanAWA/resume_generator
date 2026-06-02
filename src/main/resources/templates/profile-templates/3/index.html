@@ -18,11 +18,17 @@
 	<div id="inner">
 	
 		<div id="hd">
-			<div class="yui-gc">
-				<div class="yui-u first">
-					<h1><span th:text="${userProfile.firstName}">Joe</span> <span th:text="${userProfile.lastName}">Bloggs</span></h1>
-					<h2 th:text="${userProfile.designation}">Web Designer, Director</h2>
-				</div>
+
+			<div class="yui-u first">
+				<h1>
+					<span th:text="${userProfile.firstName}">Joe</span>
+					<span th:text="${userProfile.lastName}">Bloggs</span>
+					<a th:if="${currentUsersProfile}" href="/edit" style="margin-left: 10px; font-size: 18px;">Edit</a>
+					<a th:if="${currentUsersProfile}" th:href="@{/export/pdf/{userId}(userId=${userId})}" style="margin-left: 10px; font-size: 18px; background-color: #2c3e50; color: white; padding: 5px 15px; text-decoration: none; border-radius: 4px;">Export PDF</a>
+				</h1>
+				<h2 th:text="${userProfile.designation}">Web Designer, Director</h2>
+			</div>
+
 
 				<div class="yui-u">
 					<div class="contact-info">

@@ -36,13 +36,15 @@
         <div id="contact-info" class="vcard">
         
             <!-- Microformats! -->
-        
+
             <h1 class="fn">
                 <span th:text="${userProfile.firstName}">Joe</span>
                 <span th:text="${userProfile.lastName}">Bloggs</span>
-                <a th:if="${currentUsersProfile}" href="/edit">Edit</a>
+                <a th:if="${currentUsersProfile}" href="/edit" style="margin-left: 10px; font-size: 16px;">Edit</a>
+                <a th:if="${currentUsersProfile}" th:href="@{/export/pdf/{userId}(userId=${userId})}" style="margin-left: 10px; font-size: 16px; background-color: #333; color: white; padding: 5px 15px; text-decoration: none;">Export PDF</a>
             </h1>
-        
+
+
             <p>
                 Cell: <span class="tel" th:text="${userProfile.phone}">555-666-7777</span><br />
                 <!-- TODO: Find out how to add variable to attribute value and update all templates-->

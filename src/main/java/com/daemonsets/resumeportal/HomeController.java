@@ -96,6 +96,7 @@ public class HomeController {
         Optional<UserProfile> userProfileOptional = userProfileRepository.findByUserName(userId);
         userProfileOptional.orElseThrow(() -> new RuntimeException("Not found: " + userId));
         UserProfile userProfile = userProfileOptional.get();
+
         if ("job".equals(add)) {
             userProfile.getJobs().add(new Job());
         } else if ("education".equals(add)) {
@@ -103,6 +104,8 @@ public class HomeController {
         } else if ("skill".equals(add)) {
             userProfile.getSkills().add("");
         }
+
+        userProfileRepository.save(userProfile);
 
         model.addAttribute("userProfile", userProfile);
         return "profile-edit";
