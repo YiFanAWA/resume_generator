@@ -1,7 +1,12 @@
 package com.daemonsets.resumeportal;
 
 import com.daemonsets.resumeportal.models.User;
+import com.lowagie.text.DocumentException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -10,6 +15,7 @@ import com.daemonsets.resumeportal.models.Education;
 import com.daemonsets.resumeportal.models.Job;
 import com.daemonsets.resumeportal.models.UserProfile;
 
+import java.io.IOException;
 import java.security.Principal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -25,6 +31,8 @@ public class HomeController {
 
     @Autowired
     UserRepository userRepository;
+    @Autowired
+    PdfExportService pdfExportService;
     @GetMapping("/")
     public String home() {
         return "index";
@@ -145,6 +153,31 @@ public class HomeController {
         System.out.println(userProfile.getJobs());
 
         return "profile-templates/" + userProfile.getTheme() + "/index";
+    }
+
+    @GetMapping("/export/pdf/{userId}")
+    public ResponseEntity<byte[]> exportPdf(@PathVariable String userId) {
+        Optional<UserProfile> userProfileOptional = userProfileRepository.findByUserName(userId);
+        userProfileOptional.orElseThrow(() -> new RuntimeException("Not found: " + userId));
+
+        UserProfile userProfile = userProfileOptional.get();
+
+        try {
+            byte[] pdfBytes = pdfExportService.generatePdf(userProfile);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment",
+                    userProfile.getFirstName() + "_" + userProfile.getLastName() + "_Resume.pdf");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(pdfBytes);
+
+        } catch (DocumentException | IOException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
 }
