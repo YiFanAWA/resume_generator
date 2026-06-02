@@ -49,31 +49,33 @@
         </div>
 
         <h3>Experience</h3>
-        <table>
+        <table id="jobsTable">
             <thead>
-                <tr>
-                    <th>Company</th>
-                    <th>Designation</th>
-                    <th>Start Date</th>
-                    <th>End Date</th>
-                    <th>Current Job?</th>
-                    <th></th>
-                </tr>
+            <tr>
+                <th>Company</th>
+                <th>Designation</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Current Job?</th>
+                <th></th>
+            </tr>
             </thead>
+            <tbody>
             <tr th:each="job, stat: *{jobs}">
                 <td><input class="form-control" th:field="*{jobs[__${stat.index}__].company}"></td>
                 <td><input class="form-control" th:field="*{jobs[__${stat.index}__].designation}"></td>
                 <td><input type="date" class="form-control" th:field="*{jobs[__${stat.index}__].startDate}"></td>
                 <td><input type="date" class="form-control" th:field="*{jobs[__${stat.index}__].endDate}"></td>
                 <td><input type="checkbox" class="form-control" th:field="*{jobs[__${stat.index}__].currentJob}"></td>
-                <td><a th:href="@{'./delete?type=job&index=' + ${stat.index}}">Delete</a></td>
+                <td><a href="#" onclick="removeJob(this)" style="color: red;">Delete</a></td>
             </tr>
+            </tbody>
         </table>
-        <p><a href="./edit?add=job">Add Job</a></p>
+        <p><a href="#" onclick="addJob()" style="color: #007bff;">Add Job</a></p>
 
 
         <h3>Education</h3>
-        <table>
+        <table id="educationsTable">
             <thead>
             <tr>
                 <th>College</th>
@@ -84,28 +86,80 @@
                 <th></th>
             </tr>
             </thead>
+            <tbody>
             <tr th:each="education, stat: *{educations}">
                 <td><input class="form-control" th:field="*{educations[__${stat.index}__].college}"></td>
                 <td><input class="form-control" th:field="*{educations[__${stat.index}__].qualification}"></td>
                 <td><input type="date" class="form-control" th:field="*{educations[__${stat.index}__].startDate}"></td>
                 <td><input type="date" class="form-control" th:field="*{educations[__${stat.index}__].endDate}"></td>
                 <td><input class="form-control" th:field="*{educations[__${stat.index}__].summary}"></td>
-                <td><a th:href="@{'./delete?type=education&index=' + ${stat.index}}">Delete</a></td>
+                <td><a href="#" onclick="removeEducation(this)" style="color: red;">Delete</a></td>
             </tr>
+            </tbody>
         </table>
-        <p><a href="./edit?add=education">Add Education</a></p>
+        <p><a href="#" onclick="addEducation()" style="color: #007bff;">Add Education</a></p>
 
         <h3>Skills</h3>
-        <table>
+        <table id="skillsTable">
+            <tbody>
             <tr th:each="skill, stat: *{skills}">
                 <td><input class="form-control" th:field="*{skills[__${stat.index}__]}"></td>
-                <td><a th:href="@{'./delete?type=skill&index=' + ${stat.index}}">Delete</a></td>
+                <td><a href="#" onclick="removeSkill(this)" style="color: red;">Delete</a></td>
             </tr>
+            </tbody>
         </table>
-        <p><a href="./edit?add=skill">Add Skill</a></p>
+        <p><a href="#" onclick="addSkill()" style="color: #007bff;">Add Skill</a></p>
 
     <input type="submit" value="Submit">
     </form>
     </div>
+
+    <script>        function addJob() {
+        const table = document.getElementById('jobsTable').querySelector('tbody');
+        const rowCount = table.rows.length;
+        const newRow = table.insertRow();
+        newRow.innerHTML = `                <td><input class="form-control" name="jobs[${rowCount}].company" type="text" value=""></td>
+                <td><input class="form-control" name="jobs[${rowCount}].designation" type="text" value=""></td>
+                <td><input type="date" class="form-control" name="jobs[${rowCount}].startDate"></td>
+                <td><input type="date" class="form-control" name="jobs[${rowCount}].endDate"></td>
+                <td><input type="checkbox" class="form-control" name="jobs[${rowCount}].currentJob"></td>
+                <td><a href="#" onclick="removeJob(this)" style="color: red;">Delete</a></td>
+            `;
+    }
+
+    function removeJob(element) {
+        element.closest('tr').remove();
+    }
+
+    function addEducation() {
+        const table = document.getElementById('educationsTable').querySelector('tbody');
+        const rowCount = table.rows.length;
+        const newRow = table.insertRow();
+        newRow.innerHTML = `                <td><input class="form-control" name="educations[${rowCount}].college" type="text" value=""></td>
+                <td><input class="form-control" name="educations[${rowCount}].qualification" type="text" value=""></td>
+                <td><input type="date" class="form-control" name="educations[${rowCount}].startDate"></td>
+                <td><input type="date" class="form-control" name="educations[${rowCount}].endDate"></td>
+                <td><input class="form-control" name="educations[${rowCount}].summary" type="text" value=""></td>
+                <td><a href="#" onclick="removeEducation(this)" style="color: red;">Delete</a></td>
+            `;
+    }
+
+    function removeEducation(element) {
+        element.closest('tr').remove();
+    }
+
+    function addSkill() {
+        const table = document.getElementById('skillsTable').querySelector('tbody');
+        const rowCount = table.rows.length;
+        const newRow = table.insertRow();
+        newRow.innerHTML = `                <td><input class="form-control" name="skills[${rowCount}]" type="text" value=""></td>
+                <td><a href="#" onclick="removeSkill(this)" style="color: red;">Delete</a></td>
+            `;
+    }
+
+    function removeSkill(element) {
+        element.closest('tr').remove();
+    }
+    </script>
 </body>
 </html>

@@ -99,13 +99,14 @@ public class HomeController {
 
         if ("job".equals(add)) {
             userProfile.getJobs().add(new Job());
+            userProfileRepository.save(userProfile);
         } else if ("education".equals(add)) {
             userProfile.getEducations().add(new Education());
+            userProfileRepository.save(userProfile);
         } else if ("skill".equals(add)) {
             userProfile.getSkills().add("");
+            userProfileRepository.save(userProfile);
         }
-
-        userProfileRepository.save(userProfile);
 
         model.addAttribute("userProfile", userProfile);
         return "profile-edit";

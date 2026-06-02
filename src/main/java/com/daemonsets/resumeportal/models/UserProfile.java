@@ -20,13 +20,13 @@ public class UserProfile {
     private String designation;
 
     @OneToMany(cascade = CascadeType.ALL,
-        orphanRemoval = true)
-    @JoinColumn(name = "id")
+            orphanRemoval = true)
+    @JoinColumn(name = "user_profile_id")
     List<Job> jobs = new ArrayList<>();
 
     @OneToMany(cascade = CascadeType.ALL,
             orphanRemoval = true)
-    @JoinColumn(name = "id")
+    @JoinColumn(name = "user_profile_id")
     List<Education> educations = new ArrayList<>();
 
     @ElementCollection(targetClass=String.class)
