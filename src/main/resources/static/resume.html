@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.font.im/css?family=Rubik" rel="stylesheet" />
+    <link rel="stylesheet" href="./css/style.css" />
+    <script type="module" src="js/resume.js"></script>
+    <title>Resume</title>
+  </head>
+  <body class="profile-body">
+    <nav class="nav">
+      <div class="profile-header">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="user-icon">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+          />
+        </svg>
+        <h1 class="user-name">User Name's Profile</h1>
+      </div>
+      <p class="nav-link"><a href="/logout">Logout</a></p>
+    </nav>
+
+    <main class="profile-container">
+      <form class="profile-form" onsubmit="return false;">
+        <!-- 主题选择 -->
+        <section class="theme-section">
+          <label for="theme">Select your profile theme</label>
+          <select id="theme" name="theme">
+            <option value="theme1">Theme 1</option>
+            <option value="theme2">Theme 2</option>
+            <option value="theme3">Theme 3</option>
+          </select>
+        </section>
+
+        <!-- 基本信息 -->
+        <section class="basic-info">
+          <h2>Basic Information</h2>
+
+          <div class="form-group">
+            <label for="firstName">First Name</label>
+            <input type="text" id="firstName" name="firstName" required class="input-content" />
+          </div>
+
+          <div class="form-group">
+            <label for="lastName">Last Name</label>
+            <input type="text" id="lastName" name="lastName" required class="input-content" />
+          </div>
+
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" required class="input-content" />
+          </div>
+
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone" class="input-content" />
+          </div>
+
+          <div class="form-group">
+            <label for="designation">Designation</label>
+            <input type="text" id="designation" name="designation" class="input-content" />
+          </div>
+
+          <div class="form-group">
+            <label for="summary">Summary</label>
+            <textarea id="summary" name="summary" rows="4" class="input-content"></textarea>
+          </div>
+        </section>
+
+        <!-- 经历 -->
+        <section class="experience-section">
+          <h2>Experience</h2>
+          <p>Company Designation Start Date End Date Current Job?</p>
+          <div class="job-list">
+            <!-- 动态添加 job 项 -->
+          </div>
+          <button type="button" class="btn-add">Add Job</button>
+        </section>
+
+        <!-- 教育 -->
+        <section class="education-section">
+          <h2>Education</h2>
+          <p>College Qualification Start Date End Date Summary</p>
+          <div class="edu-list">
+            <!-- 动态添加 education 项 -->
+          </div>
+          <button type="button" class="btn-add">Add Education</button>
+        </section>
+
+        <!-- 技能 -->
+        <section class="skills-section">
+          <h2>Skills</h2>
+          <p>Skill Name Proficiency Level</p>
+          <div class="skills-list">
+            <!-- 动态添加 skill -->
+          </div>
+          <button type="button" class="btn-add">Add Skill</button>
+        </section>
+
+
+        <button type="button" class="btn-save" id="saveBtn">Save</button>
+        <button type="button" class="btn-export" id="exportPdfBtn" style="margin-left: 10px; background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Export PDF</button>
+      </form>
+    </main>
+  </body>
+</html>

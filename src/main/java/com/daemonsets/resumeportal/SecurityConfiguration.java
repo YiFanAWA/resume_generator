@@ -2,6 +2,7 @@ package com.daemonsets.resumeportal;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -23,14 +24,37 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.authorizeRequests()
-                .antMatchers("/edit").authenticated()
-                .antMatchers("/", "/register", "/profile-templates/**", "/static/**").permitAll()
+        http.csrf().disable()
+                .authorizeRequests()
+                // 公开资源：HTML 页面、静态文件
+                .antMatchers("/login.html", "/register.html", "/resume.html",
+                        "/css/**", "/js/**", "/profile-templates/**").permitAll()
+                // 公开 API：仅登录和注册
+                .antMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                // 其他所有请求需要认证
                 .anyRequest().authenticated()
-                .and().formLogin();
+                .and()
+                .formLogin()
+                .loginPage("/login.html")
+                .permitAll()
+                .and()
+                .logout()
+                .logoutUrl("/api/auth/logout")
+                .logoutSuccessUrl("/login.html")
+                .invalidateHttpSession(true)
+                .deleteCookies("JSESSIONID")
+                .permitAll();
     }
 
-        @Bean
+
+
+    @Bean
+    @Override
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
+    }
+
+    @Bean
     public PasswordEncoder getPasswordEncoder() {
         return NoOpPasswordEncoder.getInstance();
     }

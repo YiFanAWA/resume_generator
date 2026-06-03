@@ -1,0 +1,313 @@
+/* ---------------------------------------全局样式设置--------------------------------------- */
+html {
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+  margin: 0;
+}
+
+body {
+  font-family: "Rubik", sans-serif;
+  line-height: 1;
+  font-weight: 400;
+}
+
+/*--------------------------------------- login样式 ---------------------------------------*/
+
+.container-login {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f2f2f2;
+  flex-direction: column;
+}
+
+.h1-text {
+  width: 300px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.form-login {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  gap: 12px;
+}
+
+.input-username,
+.input-password,
+.input-confirm-password {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+.input-username:focus,
+.input-password:focus,
+.input-confirm-password:focus {
+  border-color: #0077ff;
+  outline: none;
+}
+
+.button-loginin {
+  font-family: inherit;
+  font-size: 18px;
+  background-color: #0077ff;
+  color: white;
+  border: 2px solid #0077ff;
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 5px;
+  width: 100%;
+}
+
+.button-loginin:hover,
+.button-loginin:active {
+  background-color: #005dc0;
+  border-color: #005dc0;
+}
+
+.button-loginin:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 4px #0077ff;
+}
+
+.link-create-account {
+  width: 300px;
+  margin-top: 14px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 300;
+}
+
+.link-create-account a:link,
+.link-create-account a:visited {
+  color: #005fcc;
+  text-decoration: none;
+}
+
+.link-create-account a:hover,
+.link-create-account a:active {
+  color: #004799;
+  text-decoration: underline;
+}
+.link-create-account a:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #0077ff;
+  border-radius: 4px;
+}
+
+/*--------------------------------------- register样式 ---------------------------------------*/
+.container-register {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f1f1f1;
+  flex-direction: column;
+}
+.card {
+  width: 450px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 36px;
+  display: flex;
+  flex-direction: column;
+}
+.h1-register-text {
+  text-align: center;
+  margin: 20px;
+}
+.form-register {
+  gap: 16px;
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  padding: 0px;
+}
+
+.input-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #585858;
+  margin-bottom: 8px;
+}
+
+.button-register {
+  font-family: inherit;
+  font-size: 18px;
+  background-color: #46b929;
+  color: white;
+  border: 2px solid #46b929;
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 5px;
+  margin-top: 20px;
+}
+
+.button-register:hover,
+.button-register:active {
+  background-color: #158b00;
+  border-color: #158b00;
+}
+
+.button-register:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 4px #46b929;
+}
+
+.link-lognin {
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
+}
+.link-lognin a:link,
+.link-lognin a:visited {
+  color: #48be33;
+  text-decoration: none;
+}
+.link-lognin a:hover,
+.link-lognin a:active {
+  color: #158b00;
+  text-decoration: underline;
+}
+.link-lognin a:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #158b00;
+  border-radius: 4px;
+}
+/*--------------------------------------- resume样式 ---------------------------------------*/
+.profile-body {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.5fr) 3fr 2fr;
+  grid-template-rows: 100px 1fr;
+  gap: 20px;
+}
+.nav {
+  padding-left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  grid-column: 1/4;
+  justify-content: space-between;
+}
+
+.profile-header {
+  padding-left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  grid-column: 1/3;
+}
+.nav-link {
+  padding: 46px;
+}
+.nav-link a {
+  font-size: 24px;
+  font-weight: 400;
+  padding: 4px 8px;
+  color: #000;
+  text-decoration: none;
+}
+.nav-link a:hover {
+  color: #0077ff;
+}
+.nav-link a:active {
+  color: #005dc0;
+}
+.user-icon {
+  width: 36px;
+  height: 36px;
+}
+.profile-container {
+  grid-column: 2 / 3;
+  grid-row: 2/3;
+}
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.basic-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+h2 {
+  font-size: 26px;
+  margin-bottom: 12px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.btn-add {
+  width: 120px;
+  padding: 8px;
+  background-color: #0077ff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.btn-add:hover,
+.btn-add:active {
+  background-color: #005dc0;
+}
+.btn-add:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 4px #0077ff;
+  border-radius: 4px;
+}
+
+.btn-save {
+  width: 120px;
+  padding: 8px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.btn-save:hover,
+.btn-save:active {
+  background-color: #218838;
+}
+.btn-save:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 4px #28a745;
+}
+
+.input-content {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+.input-content:focus {
+  outline: none;
+  border-color: #0077ff;
+  box-shadow: 0 0 5px 2px #6fb2ff;
+}
