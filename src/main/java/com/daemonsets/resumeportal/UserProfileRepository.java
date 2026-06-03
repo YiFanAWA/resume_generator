@@ -9,4 +9,6 @@ import java.util.Optional;
 
 public interface UserProfileRepository extends JpaRepository<UserProfile, Integer> {
     Optional<UserProfile> findByUserName(String userName);
+    Optional<UserProfile> findByShareToken(String shareToken);
+
 }

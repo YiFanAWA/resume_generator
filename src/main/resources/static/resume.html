@@ -20,7 +20,7 @@
         </svg>
         <h1 class="user-name">User Name's Profile</h1>
       </div>
-      <p class="nav-link"><a href="/logout">Logout</a></p>
+      <p class="nav-link" style="cursor: pointer;">Logout</p>
     </nav>
 
     <main class="profile-container">
@@ -103,6 +103,17 @@
 
         <button type="button" class="btn-save" id="saveBtn">Save</button>
         <button type="button" class="btn-export" id="exportPdfBtn" style="margin-left: 10px; background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Export PDF</button>
+        <!-- 在 Save 和 Export PDF 按钮后添加 -->
+        <div class="share-section" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+          <h3>Share Resume</h3>
+          <button type="button" id="generateShareBtn" class="btn-share">Generate Share Link</button>
+          <button type="button" id="revokeShareBtn" class="btn-revoke" style="display:none;">Revoke Share Link</button>
+          <div id="shareLinkContainer" style="margin-top: 10px; display:none;">
+            <input type="text" id="shareLink" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            <button type="button" id="copyShareLink" style="margin-top: 5px;">Copy Link</button>
+          </div>
+        </div>
+
       </form>
     </main>
   </body>

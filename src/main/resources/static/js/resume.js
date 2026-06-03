@@ -10,6 +10,11 @@ const summary = document.getElementById("summary");
 const logout = document.querySelector(".nav-link");
 const saveBtn = document.querySelector(".btn-save");
 
+// 检查必要元素是否存在
+if (!firstName || !lastName || !saveBtn) {
+  console.error("页面元素缺失，请检查 HTML 结构");
+}
+
 // 加载用户资料
 const loadProfile = async function () {
   try {
@@ -107,17 +112,26 @@ const addSkillRow = function (skill = "") {
 };
 
 // 添加按钮事件
-document.querySelector(".experience-section .btn-add").addEventListener("click", function () {
-  addJobRow();
-});
+const expBtnAdd = document.querySelector(".experience-section .btn-add");
+if (expBtnAdd) {
+  expBtnAdd.addEventListener("click", function () {
+    addJobRow();
+  });
+}
 
-document.querySelector(".education-section .btn-add").addEventListener("click", function () {
-  addEducationRow();
-});
+const eduBtnAdd = document.querySelector(".education-section .btn-add");
+if (eduBtnAdd) {
+  eduBtnAdd.addEventListener("click", function () {
+    addEducationRow();
+  });
+}
 
-document.querySelector(".skills-section .btn-add").addEventListener("click", function () {
-  addSkillRow();
-});
+const skillsBtnAdd = document.querySelector(".skills-section .btn-add");
+if (skillsBtnAdd) {
+  skillsBtnAdd.addEventListener("click", function () {
+    addSkillRow();
+  });
+}
 
 // 保存资料
 const saveProfile = async function () {
@@ -209,18 +223,107 @@ if (saveBtn) {
   saveBtn.addEventListener("click", saveProfile);
 }
 
-// 绑定导出 PDF 按钮（需要在 HTML 中添加）
+// 绑定导出 PDF 按钮
 const exportPdfBtn = document.getElementById("exportPdfBtn");
 if (exportPdfBtn) {
   exportPdfBtn.addEventListener("click", exportPdf);
 }
 
-// 退出登录
+// 退出登录（修复：调用后端 API）
 if (logout) {
-  logout.addEventListener("click", function (e) {
+  logout.addEventListener("click", async function (e) {
     e.preventDefault();
-    window.location.href = "/login.html";
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+    } catch (error) {
+      console.error("登出失败:", error);
+    } finally {
+      window.location.href = "/login.html";
+    }
   });
+}
+
+// ========== 分享功能 ==========
+
+// 生成分享链接
+const generateShareLink = async function () {
+  try {
+    const response = await fetch("/api/profile/share/generate", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      const shareLinkContainer = document.getElementById("shareLinkContainer");
+      const shareLinkInput = document.getElementById("shareLink");
+      const generateBtn = document.getElementById("generateShareBtn");
+      const revokeBtn = document.getElementById("revokeShareBtn");
+
+      shareLinkInput.value = window.location.origin + result.shareUrl;
+      shareLinkContainer.style.display = "block";
+      generateBtn.style.display = "none";
+      revokeBtn.style.display = "inline-block";
+
+      alert("Share link generated!");
+    }
+  } catch (error) {
+    console.error("生成分享链接失败:", error);
+    alert("生成分享链接失败");
+  }
+};
+
+// 撤销分享链接
+const revokeShareLink = async function () {
+  try {
+    const response = await fetch("/api/profile/share/revoke", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+
+    if (response.ok) {
+      const shareLinkContainer = document.getElementById("shareLinkContainer");
+      const generateBtn = document.getElementById("generateShareBtn");
+      const revokeBtn = document.getElementById("revokeShareBtn");
+
+      shareLinkContainer.style.display = "none";
+      generateBtn.style.display = "inline-block";
+      revokeBtn.style.display = "none";
+
+      alert("Share link revoked!");
+    }
+  } catch (error) {
+    console.error("撤销分享链接失败:", error);
+    alert("撤销分享链接失败");
+  }
+};
+
+// 复制分享链接
+const copyShareLink = function () {
+  const shareLinkInput = document.getElementById("shareLink");
+  shareLinkInput.select();
+  document.execCommand("copy");
+  alert("Link copied to clipboard!");
+};
+
+// 绑定分享功能按钮（添加存在性检查）
+const generateShareBtn = document.getElementById("generateShareBtn");
+const revokeShareBtn = document.getElementById("revokeShareBtn");
+const copyShareLinkBtn = document.getElementById("copyShareLink");
+
+if (generateShareBtn) {
+  generateShareBtn.addEventListener("click", generateShareLink);
+}
+
+if (revokeShareBtn) {
+  revokeShareBtn.addEventListener("click", revokeShareLink);
+}
+
+if (copyShareLinkBtn) {
+  copyShareLinkBtn.addEventListener("click", copyShareLink);
 }
 
 // 初始化

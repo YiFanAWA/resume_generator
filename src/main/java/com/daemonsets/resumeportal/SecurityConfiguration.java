@@ -29,8 +29,8 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 // 公开资源：HTML 页面、静态文件
                 .antMatchers("/login.html", "/register.html", "/resume.html",
                         "/css/**", "/js/**", "/profile-templates/**").permitAll()
-                // 公开 API：仅登录和注册
-                .antMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                // 公开 API：登录、注册、公开分享链接
+                .antMatchers("/api/auth/login", "/api/auth/register", "/api/public/**").permitAll()
                 // 其他所有请求需要认证
                 .anyRequest().authenticated()
                 .and()

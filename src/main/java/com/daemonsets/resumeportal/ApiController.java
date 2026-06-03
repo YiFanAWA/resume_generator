@@ -102,8 +102,8 @@ public class ApiController {
         if (principal == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Not logged in"));
         }
-        String uerName = principal.getName();
-        Optional<UserProfile> userProfileOptional = userProfileRepository.findByUserName(uerName);
+        String userName = principal.getName();
+        Optional<UserProfile> userProfileOptional = userProfileRepository.findByUserName(userName);
 
         if (userProfileOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -191,6 +191,80 @@ public class ApiController {
             return ResponseEntity.status(500).body(Map.of("error", "Failed to generate PDF").toString().getBytes());
         }
     }
+    // 在 ApiController.java 的 exportPdf 方法后添加
+
+    @PostMapping("/profile/share/generate")
+    public ResponseEntity<?> generateShareToken(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Not authenticated"));
+        }
+
+        String userName = principal.getName();
+        Optional<UserProfile> profileOpt = userProfileRepository.findByUserName(userName);
+
+        if (profileOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        UserProfile profile = profileOpt.get();
+        profile.generateShareToken();
+        profile.setPublic(true);
+        userProfileRepository.save(profile);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Share link generated");
+        response.put("shareToken", profile.getShareToken());
+        response.put("shareUrl", "/api/public/" + profile.getShareToken());
+        response.put("isPublic", String.valueOf(profile.isPublic()));
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/profile/share/revoke")
+    public ResponseEntity<?> revokeShareToken(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Not authenticated"));
+        }
+
+        String userName = principal.getName();
+        Optional<UserProfile> profileOpt = userProfileRepository.findByUserName(userName);
+
+        if (profileOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        UserProfile profile = profileOpt.get();
+        profile.revokeShareToken();
+        userProfileRepository.save(profile);
+
+        return ResponseEntity.ok(Map.of("message", "Share link revoked"));
+    }
+
+    @GetMapping("/public/{shareToken}")
+    public ResponseEntity<?> publicView(@PathVariable String shareToken) {
+        Optional<UserProfile> profileOpt = userProfileRepository.findByShareToken(shareToken);
+
+        if (profileOpt.isEmpty() || !profileOpt.get().isPublic()) {
+            return ResponseEntity.status(404).body(Map.of("error", "Resume not found or private"));
+        }
+
+        UserProfile profile = profileOpt.get();
+
+        // 只返回公开信息，过滤敏感数据
+        Map<String, Object> publicProfile = new HashMap<>();
+        publicProfile.put("firstName", profile.getFirstName());
+        publicProfile.put("lastName", profile.getLastName());
+        publicProfile.put("designation", profile.getDesignation());
+        publicProfile.put("summary", profile.getSummary());
+        publicProfile.put("jobs", profile.getJobs());
+        publicProfile.put("educations", profile.getEducations());
+        publicProfile.put("skills", profile.getSkills());
+        publicProfile.put("theme", profile.getTheme());
+        // 不返回 email、phone 等敏感信息
+
+        return ResponseEntity.ok(publicProfile);
+    }
+
 }
 
 
