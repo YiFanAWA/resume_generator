@@ -13,36 +13,37 @@
         }
 
         body {
-            font-family: 'Rubik', sans-serif;
-            background: #f5f5f5;
-            padding: 20px;
+            font-family: "Rubik", sans-serif;
+            background: #f4f6f8;
+            color: #263238;
+            padding: 24px;
         }
 
         .container {
             max-width: 900px;
             margin: 0 auto;
-            background: white;
+            background: #fff;
             padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 1px solid #dde4ea;
+            box-shadow: 0 8px 24px rgba(30, 42, 54, 0.08);
         }
 
         .header {
             text-align: center;
             margin-bottom: 30px;
             padding-bottom: 20px;
-            border-bottom: 2px solid #e0e0e0;
+            border-bottom: 2px solid #d8e0e7;
         }
 
         .name {
             font-size: 32px;
-            color: #333;
+            color: #1f2a33;
             margin-bottom: 10px;
         }
 
         .designation {
             font-size: 18px;
-            color: #666;
+            color: #66727d;
         }
 
         .section {
@@ -51,47 +52,48 @@
 
         .section-title {
             font-size: 22px;
-            color: #2c3e50;
+            color: #1f4d5f;
             margin-bottom: 15px;
             padding-bottom: 8px;
-            border-bottom: 2px solid #3498db;
+            border-bottom: 2px solid #2f90a3;
         }
 
         .summary {
             line-height: 1.6;
-            color: #555;
+            color: #46535d;
         }
 
         .item {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
             padding: 15px;
-            background: #f8f9fa;
-            border-radius: 5px;
+            background: #f8fafb;
+            border-left: 4px solid #2f90a3;
         }
 
         .item-title {
             font-size: 18px;
-            font-weight: bold;
-            color: #333;
+            font-weight: 700;
+            color: #1f2a33;
             margin-bottom: 5px;
         }
 
         .item-subtitle {
             font-size: 14px;
-            color: #666;
+            color: #66727d;
             margin-bottom: 8px;
         }
 
         .item-date {
             font-size: 13px;
-            color: #999;
+            color: #87939d;
             margin-bottom: 8px;
         }
 
         .item-description {
             font-size: 14px;
-            color: #555;
+            color: #46535d;
             line-height: 1.5;
+            margin-left: 18px;
         }
 
         .skills-list {
@@ -101,24 +103,27 @@
         }
 
         .skill-tag {
-            background: #3498db;
-            color: white;
-            padding: 8px 15px;
-            border-radius: 20px;
+            background: #e7f3f5;
+            color: #1f4d5f;
+            padding: 8px 14px;
+            border: 1px solid #b9dce3;
+            border-radius: 999px;
             font-size: 14px;
         }
 
-        .error-message {
+        .error-message,
+        .loading {
             text-align: center;
-            padding: 50px;
-            color: #e74c3c;
-            font-size: 20px;
+            padding: 50px 16px;
+        }
+
+        .error-message {
+            color: #b42318;
+            font-size: 18px;
         }
 
         .loading {
-            text-align: center;
-            padding: 50px;
-            color: #666;
+            color: #66727d;
             font-size: 18px;
         }
 
@@ -126,160 +131,194 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            background: #3498db;
+            background: #1f4d5f;
             color: white;
-            padding: 10px 20px;
+            padding: 10px 18px;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
         }
 
         .print-btn:hover {
-            background: #2980b9;
+            background: #173b49;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 12px;
+            }
+
+            .container {
+                padding: 24px;
+            }
+
+            .print-btn {
+                position: static;
+                display: block;
+                margin: 0 0 12px auto;
+            }
         }
 
         @media print {
             .print-btn {
                 display: none;
             }
+
             body {
                 padding: 0;
+                background: white;
             }
+
             .container {
                 box-shadow: none;
+                border: none;
+                max-width: 100%;
             }
         }
     </style>
 </head>
 <body>
-<button class="print-btn" onclick="window.print()">️ Print Resume</button>
+<button class="print-btn" type="button" onclick="window.print()">Print Resume</button>
 
 <div class="container" id="resumeContainer">
     <div class="loading">Loading resume...</div>
 </div>
 
 <script>
+    const escapeHtml = (value = "") =>
+        String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+
+    const hasText = (value) => value != null && String(value).trim() !== "";
+
+    function renderResponsibilities(job) {
+        if (!Array.isArray(job.responsibilities) || job.responsibilities.length === 0) {
+            return "";
+        }
+
+        return `
+            <ul class="item-description">
+                ${job.responsibilities.map(item => `<li>${escapeHtml(item)}</li>`).join("")}
+            </ul>
+        `;
+    }
+
     async function loadResume() {
-        const container = document.getElementById('resumeContainer');
+        const container = document.getElementById("resumeContainer");
 
         try {
-            // 从 URL 路径中提取 shareToken
-            // URL 格式：http://localhost:5000/public-share.html?token=xxx
             const urlParams = new URLSearchParams(window.location.search);
-            const shareToken = urlParams.get('token');
+            const shareToken = urlParams.get("token");
 
             if (!shareToken) {
                 container.innerHTML = `
-                        <div class="error-message">
-                            <h2>Invalid Link</h2>
-                            <p>Missing share token in URL.</p>
-                        </div>
-                    `;
+                    <div class="error-message">
+                        <h2>Invalid Link</h2>
+                        <p>Missing share token in URL.</p>
+                    </div>
+                `;
                 return;
             }
 
-            // 调用后端 API 获取数据
-            const response = await fetch(`/api/public/${shareToken}`);
+            const response = await fetch(`/api/public/${encodeURIComponent(shareToken)}`);
 
             if (!response.ok) {
                 container.innerHTML = `
-                        <div class="error-message">
-                            <h2>Resume Not Found</h2>
-                            <p>This resume is private or does not exist.</p>
-                        </div>
-                    `;
+                    <div class="error-message">
+                        <h2>Resume Not Found</h2>
+                        <p>This resume is private or does not exist.</p>
+                    </div>
+                `;
                 return;
             }
 
             const profile = await response.json();
             renderResume(profile);
-
         } catch (error) {
-            console.error('Error loading resume:', error);
+            console.error("Error loading resume:", error);
             container.innerHTML = `
-                    <div class="error-message">
-                        <h2>Error Loading Resume</h2>
-                        <p>Please try again later.</p>
-                    </div>
-                `;
+                <div class="error-message">
+                    <h2>Error Loading Resume</h2>
+                    <p>Please try again later.</p>
+                </div>
+            `;
         }
     }
 
     function renderResume(profile) {
-        const container = document.getElementById('resumeContainer');
+        const container = document.getElementById("resumeContainer");
 
         let html = `
-                <div class="header">
-                    <h1 class="name">${profile.firstName || ''} ${profile.lastName || ''}</h1>
-                    ${profile.designation ? `<p class="designation">${profile.designation}</p>` : ''}
+            <div class="header">
+                <h1 class="name">${escapeHtml(profile.firstName || "")} ${escapeHtml(profile.lastName || "")}</h1>
+                ${hasText(profile.designation) ? `<p class="designation">${escapeHtml(profile.designation)}</p>` : ""}
+            </div>
+        `;
+
+        if (hasText(profile.summary)) {
+            html += `
+                <div class="section">
+                    <h2 class="section-title">Professional Summary</h2>
+                    <p class="summary">${escapeHtml(profile.summary)}</p>
                 </div>
             `;
-
-        // Professional Summary
-        if (profile.summary) {
-            html += `
-                    <div class="section">
-                        <h2 class="section-title">Professional Summary</h2>
-                        <p class="summary">${profile.summary}</p>
-                    </div>
-                `;
         }
 
-        // Work Experience
-        if (profile.jobs && profile.jobs.length > 0) {
+        if (Array.isArray(profile.jobs) && profile.jobs.length > 0) {
             html += `<div class="section"><h2 class="section-title">Work Experience</h2>`;
-            profile.jobs.forEach(job => {
+            profile.jobs.forEach((job) => {
                 html += `
-                        <div class="item">
-                            <div class="item-title">${job.designation || ''}</div>
-                            <div class="item-subtitle">${job.company || ''}</div>
-                            <div class="item-date">
-                                ${job.formattedStartDate || ''} - 
-                                ${job.currentJob ? 'Present' : (job.formattedEndDate || '')}
-                            </div>
-                            ${job.responsibilities ? `<div class="item-description">${job.responsibilities}</div>` : ''}
+                    <div class="item">
+                        <div class="item-title">${escapeHtml(job.designation || "")}</div>
+                        <div class="item-subtitle">${escapeHtml(job.company || "")}</div>
+                        <div class="item-date">
+                            ${escapeHtml(job.formattedStartDate || "")} -
+                            ${job.currentJob ? "Present" : escapeHtml(job.formattedEndDate || "")}
                         </div>
-                    `;
-            });
-            html += `</div>`;
-        }
-
-        // Education
-        if (profile.educations && profile.educations.length > 0) {
-            html += `<div class="section"><h2 class="section-title">Education</h2>`;
-            profile.educations.forEach(edu => {
-                html += `
-                        <div class="item">
-                            <div class="item-title">${edu.college || ''}</div>
-                            <div class="item-subtitle">${edu.qualification || ''}</div>
-                            <div class="item-date">
-                                ${edu.formattedStartDate || ''} - 
-                                ${edu.formattedEndDate || ''}
-                            </div>
-                            ${edu.summary ? `<div class="item-description">${edu.summary}</div>` : ''}
-                        </div>
-                    `;
-            });
-            html += `</div>`;
-        }
-
-        // Skills
-        if (profile.skills && profile.skills.length > 0) {
-            html += `
-                    <div class="section">
-                        <h2 class="section-title">Skills</h2>
-                        <div class="skills-list">
-                            ${profile.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
-                        </div>
+                        ${renderResponsibilities(job)}
                     </div>
                 `;
+            });
+            html += `</div>`;
+        }
+
+        if (Array.isArray(profile.educations) && profile.educations.length > 0) {
+            html += `<div class="section"><h2 class="section-title">Education</h2>`;
+            profile.educations.forEach((edu) => {
+                html += `
+                    <div class="item">
+                        <div class="item-title">${escapeHtml(edu.college || "")}</div>
+                        <div class="item-subtitle">${escapeHtml(edu.qualification || "")}</div>
+                        <div class="item-date">
+                            ${escapeHtml(edu.formattedStartDate || "")} -
+                            ${escapeHtml(edu.formattedEndDate || "")}
+                        </div>
+                        ${hasText(edu.summary) ? `<div class="item-description">${escapeHtml(edu.summary)}</div>` : ""}
+                    </div>
+                `;
+            });
+            html += `</div>`;
+        }
+
+        if (Array.isArray(profile.skills) && profile.skills.length > 0) {
+            html += `
+                <div class="section">
+                    <h2 class="section-title">Skills</h2>
+                    <div class="skills-list">
+                        ${profile.skills.map(skill => `<span class="skill-tag">${escapeHtml(skill)}</span>`).join("")}
+                    </div>
+                </div>
+            `;
         }
 
         container.innerHTML = html;
     }
 
-    // 页面加载时执行
     loadResume();
 </script>
 </body>

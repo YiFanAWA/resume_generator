@@ -1,173 +1,104 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns:th="http://www.thymeleaf.org">
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
-
-	<title>Jonathan Doe | Web Designer, Director | name@yourdomain.com</title>
-	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
-
-	<meta name="keywords" content="" />
-	<meta name="description" content="" />
-
-	<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.7.0/build/reset-fonts-grids/reset-fonts-grids.css" media="all" /> 
-	<link rel="stylesheet" type="text/css" href="../profile-templates/3/resume.css" media="all" />
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Resume</title>
+    <link rel="stylesheet" type="text/css" href="../profile-templates/3/resume.css" media="all">
 </head>
 <body>
-
 <div id="doc2" class="yui-t7">
-	<div id="inner">
-	
-		<div id="hd">
+    <div id="inner">
+        <div id="hd">
+            <div class="yui-u first">
+                <h1>
+                    <span th:text="${userProfile.firstName}">First</span>
+                    <span th:text="${userProfile.lastName}">Last</span>
+                    <a th:if="${currentUsersProfile}" href="/edit" style="margin-left: 10px; font-size: 18px;">Edit</a>
+                    <a th:if="${currentUsersProfile}" th:href="@{/export/pdf/{userId}(userId=${userId})}" style="margin-left: 10px; font-size: 18px; background-color: #2c3e50; color: white; padding: 5px 15px; text-decoration: none; border-radius: 4px;">Export PDF</a>
+                </h1>
+                <h2 th:text="${userProfile.designation}">Designation</h2>
+            </div>
 
-			<div class="yui-u first">
-				<h1>
-					<span th:text="${userProfile.firstName}">Joe</span>
-					<span th:text="${userProfile.lastName}">Bloggs</span>
-					<a th:if="${currentUsersProfile}" href="/edit" style="margin-left: 10px; font-size: 18px;">Edit</a>
-					<a th:if="${currentUsersProfile}" th:href="@{/export/pdf/{userId}(userId=${userId})}" style="margin-left: 10px; font-size: 18px; background-color: #2c3e50; color: white; padding: 5px 15px; text-decoration: none; border-radius: 4px;">Export PDF</a>
-				</h1>
-				<h2 th:text="${userProfile.designation}">Web Designer, Director</h2>
-			</div>
+            <div class="yui-u">
+                <div class="contact-info">
+                    <h3><a th:text="${userProfile.email}" th:href="'mailto:' + ${userProfile.email}">name@example.com</a></h3>
+                    <h3 th:text="${userProfile.phone}">(000) 000-0000</h3>
+                </div>
+            </div>
+        </div>
 
+        <div id="bd">
+            <div id="yui-main">
+                <div class="yui-b">
+                    <div class="yui-gf" th:if="${userProfile.summary != null and !#strings.isEmpty(userProfile.summary)}">
+                        <div class="yui-u first">
+                            <h2>Profile</h2>
+                        </div>
+                        <div class="yui-u">
+                            <p class="enlarge" th:text="${userProfile.summary}">Professional summary</p>
+                        </div>
+                    </div>
 
-				<div class="yui-u">
-					<div class="contact-info">
-						<h3><a th:text="${userProfile.email}" href="${userProfile.email}">name@yourdomain.com</a></h3>
-						<h3 th:text="${userProfile.phone}">(313) - 867-5309</h3>
-					</div><!--// .contact-info -->
-				</div>
-			</div><!--// .yui-gc -->
-		</div><!--// hd -->
+                    <div class="yui-gf" th:if="${userProfile.skills != null and !userProfile.skills.isEmpty()}">
+                        <div class="yui-u first">
+                            <h2>Skills</h2>
+                        </div>
+                        <div class="yui-u">
+                            <ul class="talent">
+                                <li th:each="skill : ${userProfile.skills}" th:text="${skill}">Skill</li>
+                            </ul>
+                        </div>
+                    </div>
 
-		<div id="bd">
-			<div id="yui-main">
-				<div class="yui-b">
+                    <div class="yui-gf" th:if="${userProfile.jobs != null and !userProfile.jobs.isEmpty()}">
+                        <div class="yui-u first">
+                            <h2>Experience</h2>
+                        </div>
+                        <div class="yui-u">
+                            <div class="job" th:each="job, stat : ${userProfile.jobs}" th:classappend="${stat.last} ? ' last' : ''">
+                                <h2 th:text="${job.company}">Company</h2>
+                                <h3 th:text="${job.designation}">Role</h3>
+                                <h4 th:text="${job.formattedStartDate + ' - ' + (job.currentJob ? 'Present' : job.formattedEndDate)}">Jan 2020 - Present</h4>
+                                <ul th:if="${job.responsibilities != null and !job.responsibilities.isEmpty()}">
+                                    <li th:each="responsibility : ${job.responsibilities}" th:text="${responsibility}">Responsibility</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
 
-					<div class="yui-gf">
-						<div class="yui-u first">
-							<h2>Profile</h2>
-						</div>
-						<div class="yui-u">
-							<p class="enlarge" th:text="${userProfile.summary}">
-								Progressively evolve cross-platform ideas before impactful infomediaries. Energistically visualize tactical initiatives before cross-media catalysts for change. 
-							</p>
-						</div>
-					</div><!--// .yui-gf -->
+                    <div class="yui-gf last" th:if="${userProfile.educations != null and !userProfile.educations.isEmpty()}">
+                        <div class="yui-u first">
+                            <h2>Education</h2>
+                        </div>
+                        <div class="yui-u">
+                            <div th:each="education : ${userProfile.educations}">
+                                <h2 th:text="${education.college}">University</h2>
+                                <h3>
+                                    <span th:text="${education.qualification}">Qualification</span>
+                                    <span th:if="${education.formattedStartDate != null or education.formattedEndDate != null}"> - </span>
+                                    <span th:text="${education.formattedStartDate}">Jan 2020</span>
+                                    <span th:if="${education.formattedStartDate != null or education.formattedEndDate != null}"> to </span>
+                                    <span th:text="${education.formattedEndDate}">Dec 2022</span>
+                                </h3>
+                                <p th:if="${education.summary != null and !#strings.isEmpty(education.summary)}" th:text="${education.summary}">Summary</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-					<div class="yui-gf">
-						<div class="yui-u first">
-							<h2>Skills</h2>
-						</div>
-						<div class="yui-u">
-
-								<div class="talent">
-									<h2>Web Design</h2>
-									<p>Assertively exploit wireless initiatives rather than synergistic core competencies.	</p>
-								</div>
-
-								<div class="talent">
-									<h2>Interface Design</h2>
-									<p>Credibly streamline mission-critical value with multifunctional functionalities.	 </p>
-								</div>
-
-								<div class="talent">
-									<h2>Project Direction</h2>
-									<p>Proven ability to lead and manage a wide variety of design and development projects in team and independent situations.</p>
-								</div>
-						</div>
-					</div><!--// .yui-gf -->
-
-					<div class="yui-gf">
-						<div class="yui-u first">
-							<h2>Technical</h2>
-						</div>
-						<div class="yui-u">
-							<ul class="talent">
-								<li>XHTML</li>
-								<li>CSS</li>
-								<li class="last">Javascript</li>
-							</ul>
-
-							<ul class="talent">
-								<li>Jquery</li>
-								<li>PHP</li>
-								<li class="last">CVS / Subversion</li>
-							</ul>
-
-							<ul class="talent">
-								<li>OS X</li>
-								<li>Windows XP/Vista</li>
-								<li class="last">Linux</li>
-							</ul>
-						</div>
-					</div><!--// .yui-gf-->
-
-					<div class="yui-gf">
-	
-						<div class="yui-u first">
-							<h2>Experience</h2>
-						</div><!--// .yui-u -->
-
-						<div class="yui-u">
-
-							<div class="job">
-								<h2>Facebook</h2>
-								<h3>Senior Interface Designer</h3>
-								<h4>2005-2007</h4>
-								<p>Intrinsicly enable optimal core competencies through corporate relationships. Phosfluorescently implement worldwide vortals and client-focused imperatives. Conveniently initiate virtual paradigms and top-line convergence. </p>
-							</div>
-
-							<div class="job">
-								<h2>Apple Inc.</h2>
-								<h3>Senior Interface Designer</h3>
-								<h4>2005-2007</h4>
-								<p>Progressively reconceptualize multifunctional "outside the box" thinking through inexpensive methods of empowerment. Compellingly morph extensive niche markets with mission-critical ideas. Phosfluorescently deliver bricks-and-clicks strategic theme areas rather than scalable benefits. </p>
-							</div>
-
-							<div class="job">
-								<h2>Microsoft</h2>
-								<h3>Principal and Creative Lead</h3>
-								<h4>2004-2005</h4>
-								<p>Intrinsicly transform flexible manufactured products without excellent intellectual capital. Energistically evisculate orthogonal architectures through covalent action items. Assertively incentivize sticky platforms without synergistic materials. </p>
-							</div>
-
-
-							<div class="job last">
-								<h2>International Business Machines (IBM)</h2>
-								<h3>Lead Web Designer</h3>
-								<h4>2001-2004</h4>
-								<p>Globally re-engineer cross-media schemas through viral methods of empowerment. Proactively grow long-term high-impact human capital and highly efficient innovation. Intrinsicly iterate excellent e-tailers with timely e-markets.</p>
-							</div>
-
-						</div><!--// .yui-u -->
-					</div><!--// .yui-gf -->
-
-
-					<div class="yui-gf last">
-						<div class="yui-u first">
-							<h2>Education</h2>
-						</div>
-						<div class="yui-u">
-							<h2>Indiana University - Bloomington, Indiana</h2>
-							<h3>Dual Major, Economics and English &mdash; <strong>4.0 GPA</strong> </h3>
-						</div>
-					</div><!--// .yui-gf -->
-
-
-				</div><!--// .yui-b -->
-			</div><!--// yui-main -->
-		</div><!--// bd -->
-
-		<div id="ft">
-			<p>Jonathan Doe &mdash; <a href="mailto:name@yourdomain.com">name@yourdomain.com</a> &mdash; (313) - 867-5309</p>
-		</div><!--// footer -->
-
-	</div><!-- // inner -->
-
-
-</div><!--// doc -->
-
-
+        <div id="ft">
+            <p>
+                <span th:text="${userProfile.firstName + ' ' + userProfile.lastName}">Full Name</span>
+                -
+                <a th:href="'mailto:' + ${userProfile.email}" th:text="${userProfile.email}">name@example.com</a>
+                -
+                <span th:text="${userProfile.phone}">(000) 000-0000</span>
+            </p>
+        </div>
+    </div>
+</div>
 </body>
 </html>
-

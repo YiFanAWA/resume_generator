@@ -21,6 +21,7 @@ public class UserProfile {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private int id;
 
+    @Column(nullable = false, unique = true, length = 100)
     private String userName;
 
     private int theme;
@@ -40,7 +41,7 @@ public class UserProfile {
     @Column(name = "is_public")
     private boolean isPublic = false;
 
-    @Column(name = "share_token", unique = true)
+    @Column(name = "share_token", unique = true, length = 64)
     private String shareToken;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)

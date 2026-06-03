@@ -8,9 +8,16 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private int id;
+
+    @Column(nullable = false, unique = true, length = 100)
     private String userName;
+
+    @Column(nullable = false)
     private String password;
+
     private boolean active;
+
+    @Column(nullable = false)
     private String roles;
 
     public int getId() {

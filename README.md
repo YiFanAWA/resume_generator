@@ -1,57 +1,84 @@
-<<<<<<< HEAD
-# Resume-Generator
+# Resume Generator
 
- Resume-generator is a java spring-boot and thyme-leaf based web application that allows you to create HTML resumes easily. The application allows you to choose from 3 different themes when creating/ editing a resume. 
+这是一个简历生成系统，当前后端为 Spring Boot，现阶段保留少量静态页面用于过渡验证；后续前端会迁移为 React，后端主要提供 REST API。
 
-## How to run the application
+## 当前能力
 
-1. In order to get this application up and running quickly, you will need to have `java` & `docker` run-time installed on your computer. 
-2. On a local computer where you have a docker runtime and java installed, clone this repository and go to `Deployment > target` folder. 
-3. Now, run the following commands one by one in the given sequence:<br />
-   a) `docker run --name mysql-standalone -p 6603:3306 -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=resume-portal -d mysql`<br />
-   b) `java -jar resume-portal-1.0.0.jar`<br />
-4. The application should be up and running on the following `URL: http://localhost:5000`
+- 用户注册、登录、退出
+- 当前用户简历资料读取和更新
+- PDF 导出
+- 公开分享链接生成、撤销和公开访问
+- 三套 Thymeleaf 简历预览模板
+- React 开发环境跨域支持
 
+## 技术栈
 
- ## How to use Resume-Generator
+- Java 11
+- Spring Boot 2.3.1
+- Spring Security
+- Spring Data JPA
+- MySQL 8
+- Maven
 
-1. On the welcome screen, use the following credentials:<br />
-    `user: newton`<br />
-    `password: newton`<br />
-2. Once, you are logged in you can change theme, update given information and then click submit button given at the bottom to save your changes.      
-3. Clicking submit will generate a preview of your HTML resume.  
+## 本地启动
 
- ## User Stories
+启动 MySQL：
 
-- Users can choose different themes, and create a beautiful resume quickly. 
-- Deployment of the application is pretty quick due to all the dependencies packed in a single fat jar file as a spring boot application.  
+```bash
+docker run --name mysql-standalone -p 6603:3306 -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=resume-portal -d mysql
+```
 
- ## Features
+启动后端：
 
- - Easy to understand code which is built following Spring MVC design pattern.
- - Simple and straightforward User Interface. 
- - Built in Spring Security and hibernate ORM which increases the potability of the application. 
+```bash
+mvn spring-boot:run
+```
 
- ## Future features
+默认后端地址：
 
- - Make it more stable with higher quality to match a production grade application. 
- - Resolve obvious defects. 
- - Complete docker-compose file to further simplify the deployment of the application. 
+```text
+http://localhost:5000
+```
 
- ## Dependencies 
+## 配置项
 
- - Docker
- - Spring boot, Spring MVC, Spring Security, Spring ORM
- - MySQL, Hibernate
- - thymeleaf
- - Enterprise Java
- - JSP and Servlets
+以下配置都有本地默认值，部署时建议通过环境变量覆盖：
 
-## What the app looks like
+```text
+DB_URL
+DB_USERNAME
+DB_PASSWORD
+SQL_INIT_MODE
+CORS_ALLOWED_ORIGINS
+DB_POOL_MAX_SIZE
+DB_POOL_MIN_IDLE
+```
 
-![screenshot1](https://raw.githubusercontent.com/Damans227/Resume-Generator/main/screenshots/resume-generator.gif)
+React 本地开发时，默认允许：
 
-=======
-# resume_generator
-java_project 111
->>>>>>> 309a755de46342945e343da14428956896145dc0
+```text
+http://localhost:3000
+http://localhost:5173
+```
+
+## 主要 API
+
+```text
+POST /api/auth/register
+POST /api/auth/login
+GET  /api/auth/me
+POST /api/auth/logout
+
+GET  /api/profile
+PUT  /api/profile
+GET  /api/profile/export/pdf
+
+GET  /api/profile/share
+POST /api/profile/share/generate
+POST /api/profile/share/revoke
+GET  /api/public/{shareToken}
+```
+
+## 后续方向
+
+详细规划见 `docs/FEATURE_ROADMAP.md`。当前优先级是先完成前后端分离基础、安全收口、测试补齐，再推进高并发基础设施。
