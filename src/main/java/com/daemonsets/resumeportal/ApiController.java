@@ -191,7 +191,6 @@ public class ApiController {
             return ResponseEntity.status(500).body(Map.of("error", "Failed to generate PDF").toString().getBytes());
         }
     }
-    // 在 ApiController.java 的 exportPdf 方法后添加
 
     @PostMapping("/profile/share/generate")
     public ResponseEntity<?> generateShareToken(Principal principal) {
@@ -214,11 +213,13 @@ public class ApiController {
         Map<String, String> response = new HashMap<>();
         response.put("message", "Share link generated");
         response.put("shareToken", profile.getShareToken());
-        response.put("shareUrl", "/api/public/" + profile.getShareToken());
+        response.put("shareUrl", "/public-share.html?token=" + profile.getShareToken());
         response.put("isPublic", String.valueOf(profile.isPublic()));
 
         return ResponseEntity.ok(response);
     }
+
+
 
     @PostMapping("/profile/share/revoke")
     public ResponseEntity<?> revokeShareToken(Principal principal) {

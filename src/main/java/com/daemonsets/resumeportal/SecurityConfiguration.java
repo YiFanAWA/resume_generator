@@ -22,12 +22,13 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         auth.userDetailsService(userDetailsService);
     }
 
+
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.csrf().disable()
                 .authorizeRequests()
                 // 公开资源：HTML 页面、静态文件
-                .antMatchers("/login.html", "/register.html", "/resume.html",
+                .antMatchers("/login.html", "/register.html", "/resume.html", "/public-share.html",
                         "/css/**", "/js/**", "/profile-templates/**").permitAll()
                 // 公开 API：登录、注册、公开分享链接
                 .antMatchers("/api/auth/login", "/api/auth/register", "/api/public/**").permitAll()
@@ -45,6 +46,8 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .deleteCookies("JSESSIONID")
                 .permitAll();
     }
+
+
 
 
 

@@ -25,32 +25,228 @@
 - ✅ 响应式Web界面
 
 **技术架构：**
-- Spring Boot 2.3.1
-- Spring MVC + Thymeleaf
-- Spring Security + JPA/Hibernate
-- MySQL 8.0
-- Maven构建
+- **后端框架**: Spring Boot 2.3.1
+- **Web 层**: Spring MVC（REST API）
+- **视图层**: Thymeleaf（服务端渲染）+ 纯前端 HTML/JS
+- **安全**: Spring Security（Session + Cookie 认证）
+- **数据持久化**: Spring Data JPA + Hibernate
+- **数据库**: MySQL 8.0
+- **构建工具**: Maven + Maven Wrapper
+- **部署方式**: Fat JAR / Docker
+
+**架构特点：**
+- ✅ 前后端分离（静态资源 + REST API）
+- ✅ 单体架构（便于开发和部署）
+- ✅ 轻量级（无 Redis、消息队列等中间件）
+- ✅ 同域部署（无需 CORS 配置）
 
 ---
 
 ## 扩展方向总览
 
-| 序号 | 方向 | 难度 | 价值 | 预计周期 |
-|------|------|------|------|----------|
-| 1 | 简历导出与分享 | ⭐⭐ | ⭐⭐⭐⭐⭐ | 1-2周 |
-| 2 | 简历模板增强 | ⭐⭐⭐ | ⭐⭐⭐⭐ | 2-3周 |
-| 3 | AI智能辅助 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 3-4周 |
-| 4 | 多版本管理 | ⭐⭐⭐ | ⭐⭐⭐⭐ | 2周 |
-| 5 | 数据分析与追踪 | ⭐⭐⭐ | ⭐⭐⭐ | 1-2周 |
-| 6 | 协作与反馈 | ⭐⭐⭐⭐ | ⭐⭐⭐ | 3周 |
-| 7 | 求职集成 | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | 3-4周 |
-| 8 | 多媒体支持 | ⭐⭐⭐⭐ | ⭐⭐⭐ | 2-3周 |
-| 9 | 国际化与本地化 | ⭐⭐ | ⭐⭐⭐ | 1-2周 |
-| 10 | 高级功能 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | 4周+ |
+| 序号 | 方向 | 难度 | 价值 | 预计周期 | 优先级 |
+|------|------|------|------|----------|----------|
+| 1 | 简历导出与分享 | ⭐⭐ | ⭐⭐⭐⭐⭐ | 1-2周 |  最高 |
+| 2 | 简历模板增强 | ⭐⭐ | ⭐⭐⭐⭐ | 2-3周 | 高 |
+| 3 | 多版本管理 | ⭐⭐⭐ | ⭐⭐⭐⭐ | 2周 | 高 |
+| 4 | 数据分析与追踪 | ⭐ | ⭐⭐⭐ | 1-2周 | 中 |
+| 5 | AI智能辅助 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 3-4周 | 中 |
+| 6 | 求职集成 | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | 3-4周 | 低 |
+| 7 | 国际化与本地化 | ⭐⭐ | ⭐⭐⭐ | 1-2周 | 低 |
+| 8 | 多媒体支持 | ⭐⭐⭐⭐ | ⭐⭐⭐ | 2-3周 | 低 |
+| 9 | 协作与反馈 | ⭐⭐⭐⭐ | ⭐⭐ | 3周 | 低 |
+| 10 | 高级功能 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | 4周+ | 未来 |
 
 ---
 
 ## 详细功能规划
+
+### 0. 高并发架构升级 ⚡
+
+#### 0.1 线程池与异步处理
+**功能描述：**
+- 引入 Spring @Async 异步任务处理
+- 配置自定义线程池管理并发任务
+- 将耗时操作（PDF导出、AI调用、邮件发送）异步化
+
+**技术方案：**
+```
+@Configuration
+public class ThreadPoolConfig {
+    @Bean
+    public Executor taskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(10);
+        executor.setMaxPoolSize(50);
+        executor.setQueueCapacity(200);
+        executor.setThreadNamePrefix("resume-async-");
+        executor.initialize();
+        return executor;
+    }
+}
+```
+
+**应用场景：**
+- PDF导出（2-5秒操作）→ 异步处理，立即返回
+- AI内容生成（1-3秒API调用）→ 后台处理
+- 邮件/SMS通知 → 异步发送，不阻塞主请求
+- 日志记录 → 异步写入数据库
+
+**预期效果：**
+- 主线程响应时间降低 60-80%
+- 用户体验显著提升（无需等待耗时操作）
+- 系统吞吐量提升 3-5 倍
+
+---
+
+#### 0.2 Redis缓存层
+**功能描述：**
+- 引入 Redis 作为分布式缓存
+- 缓存高频访问的公开分享简历
+- 缓存热门模板和配置信息
+
+**技术方案：**
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-redis</artifactId>
+</dependency>
+```
+
+**缓存策略：**
+```java
+// 缓存公开分享的简历（减少数据库查询）
+@Cacheable(value = "publicResume", key = "#shareToken")
+public UserProfile getPublicProfile(String shareToken) {
+    return userProfileRepository.findByShareToken(shareToken);
+}
+
+// 缓存热门模板
+@Cacheable(value = "templates")
+public List<Template> getTemplates() {
+    return templateRepository.findAll();
+}
+```
+
+**预期效果：**
+- 公开分享接口 QPS 提升 10-50 倍
+- 数据库查询减少 70-80%
+- 响应时间从 100ms 降低到 5-10ms
+
+**缓存场景优先级：**
+1. 公开分享简历（`/api/public/{token}`）- 读多写少
+2. 模板列表 - 极少变更
+3. 技能推荐库 - 定期更新
+4. 用户会话 - 可选（替代 Session）
+
+---
+
+#### 0.3 数据库连接池优化
+**功能描述：**
+- 优化 HikariCP 连接池配置
+- 根据并发量调整连接数
+- 添加连接监控和告警
+
+**配置示例：**
+```
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 50      # 最大连接数
+      minimum-idle: 10           # 最小空闲连接
+      connection-timeout: 30000  # 连接超时
+      idle-timeout: 600000       # 空闲超时
+      max-lifetime: 1800000      # 连接最大存活时间
+```
+
+**监控指标：**
+- 活跃连接数
+- 等待连接数
+- 连接获取时间
+- 连接超时次数
+
+---
+
+#### 0.4 消息队列集成
+**功能描述：**
+- 引入 RabbitMQ 实现异步消息处理
+- 解耦耗时任务和主业务流程
+- 支持批量处理和重试机制
+
+**技术方案：**
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-amqp</artifactId>
+</dependency>
+```
+
+**使用场景：**
+- 批量导出任务（PDF + Word + HTML）
+- AI内容生成任务队列
+- 邮件/SMS通知发送
+- 简历查看日志异步写入
+- Webhook通知推送
+
+**预期效果：**
+- 主请求响应时间降低 50-70%
+- 支持任务重试和失败处理
+- 系统解耦，易于扩展
+
+---
+
+#### 0.5 熔断器与限流
+**功能描述：**
+- 引入 Resilience4j 实现熔断器模式
+- 防止第三方 API 故障导致系统雪崩
+- 实现接口限流保护
+
+**技术方案：**
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
+</dependency>
+```
+
+**应用场景：**
+- OpenAI/文心一言 API 调用 → 熔断 + 降级
+- GitHub/LinkedIn 第三方 API → 重试 + 熔断
+- 公开分享接口 → 限流防刷
+- PDF导出 → 并发数限制
+
+**配置示例：**
+```java
+@CircuitBreaker(name = "aiService", fallbackMethod = "fallbackSuggestion")
+@Retryable(maxAttempts = 3, backoff = @Backoff(delay = 1000))
+public String generateAISuggestion(UserProfile profile) {
+    return aiService.callAPI(profile);
+}
+```
+
+---
+
+#### 0.6 性能监控与优化
+**功能描述：**
+- 集成 Micrometer + Prometheus 监控系统
+- 实时监控关键指标
+- 配置告警规则
+
+**监控指标：**
+- API 响应时间（P50, P95, P99）
+- 请求成功率
+- 线程池使用情况
+- 数据库连接池状态
+- Redis 命中率
+- JVM 内存和 GC
+
+**技术栈：**
+- Micrometer（指标收集）
+- Prometheus（数据存储）
+- Grafana（可视化）
+- Spring Boot Actuator（健康检查）
+
+---
 
 ### 1. 简历导出与分享功能 ⭐⭐⭐⭐⭐
 
@@ -582,6 +778,106 @@ POST   /api/v1/ai/suggest       - AI建议
 
 ## 实施优先级
 
+### ⚡ 第零阶段：高并发基础设施（4-6周）
+
+**目标：** 构建高性能、可扩展的系统架构，为后续功能奠定基础
+
+**为什么优先：**
+- 高并发优化是**底层架构升级**，不影响业务功能开发
+- 可以**渐进式引入**（线程池 → 缓存 → 消息队列 → 监控）
+- 每个优化都能**立即提升现有功能**的性能
+- 为 AI 功能（耗时 API 调用）做好准备
+
+#### Week 1-2：线程池与异步处理
+1. **配置自定义线程池** (2天)
+   - 创建 `ThreadPoolConfig` 配置类
+   - 设置核心线程数、最大线程数、队列容量
+   - 启用 `@EnableAsync`
+
+2. **异步化现有功能** (3天)
+   - PDF导出改为异步处理
+   - 邮件发送异步化
+   - 日志记录异步化
+
+3. **测试与优化** (2天)
+   - 使用 JMeter 压测对比优化前后性能
+   - 调整线程池参数
+   - 监控线程使用情况
+
+**预期成果：**
+- PDF导出响应时间从 3-5秒 → 立即返回
+- 主线程阻塞减少 60-80%
+- 系统吞吐量提升 3-5 倍
+
+---
+
+#### Week 3-4：Redis缓存层
+4. **部署 Redis** (1天)
+   - Docker 部署 Redis 容器
+   - 配置 Redis 连接
+   - 测试连通性
+
+5. **实现缓存逻辑** (3天)
+   - 公开分享简历缓存（最高优先级）
+   - 模板列表缓存
+   - 配置缓存过期策略
+
+6. **缓存监控与优化** (2天)
+   - 监控缓存命中率
+   - 调整缓存大小
+   - 处理缓存穿透/击穿/雪崩
+
+**预期成果：**
+- 公开分享接口 QPS 提升 10-50 倍
+- 数据库查询减少 70-80%
+- 响应时间从 100ms → 5-10ms
+
+---
+
+#### Week 5：数据库连接池与监控
+7. **优化 HikariCP** (2天)
+   - 调整连接池参数
+   - 配置连接超时和回收策略
+   - 添加连接池监控
+
+8. **集成监控系统** (3天)
+   - 添加 Spring Boot Actuator
+   - 配置 Micrometer + Prometheus
+   - 搭建 Grafana 仪表盘
+
+**预期成果：**
+- 数据库连接利用率提升
+- 实时监控系统性能
+- 快速定位性能瓶颈
+
+---
+
+#### Week 6：消息队列与熔断器
+9. **部署 RabbitMQ** (2天)
+   - Docker 部署 RabbitMQ
+   - 配置消息队列
+   - 实现消费者逻辑
+
+10. **引入熔断器** (3天)
+    - 集成 Resilience4j
+    - 为第三方 API 添加熔断器
+    - 实现降级策略
+
+**预期成果：**
+- 系统解耦，支持异步任务
+- 防止第三方 API 故障导致雪崩
+- 提升系统稳定性
+
+**第零阶段总计：**
+- ✅ 线程池 + @Async
+- ✅ Redis 缓存
+- ✅ 连接池优化
+- ✅ 监控系统
+- ✅ 消息队列
+- ✅ 熔断器
+
+---
+
 ### 🎯 第一阶段：核心价值提升（1-2个月）
 
 **目标：** 快速上线高价值功能，提升用户体验
@@ -676,7 +972,7 @@ POST   /api/v1/ai/suggest       - AI建议
 ## 技术栈建议
 
 ### 后端增强
-```xml
+```
 <!-- PDF生成 -->
 <dependency>
     <groupId>com.itextpdf</groupId>
