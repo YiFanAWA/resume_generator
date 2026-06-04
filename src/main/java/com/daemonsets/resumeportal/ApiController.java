@@ -314,7 +314,7 @@ public class ApiController {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("message", profile.isPublic() ? "Share link active" : "Share link disabled");
         response.put("shareToken", profile.getShareToken());
-        response.put("shareUrl", profile.getShareToken() == null ? null : "/public-share.html?token=" + profile.getShareToken());
+        response.put("shareUrl", profile.getShareToken() == null ? null : "/app/public-share?token=" + profile.getShareToken());
         response.put("isPublic", profile.isPublic());
         return response;
     }

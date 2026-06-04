@@ -3,6 +3,7 @@ package com.daemonsets.resumeportal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -42,9 +43,20 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .and()
                 .csrf().disable()
                 .authorizeRequests()
-                .antMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                .antMatchers("/", "/login.html", "/register.html", "/resume.html", "/public-share.html",
-                        "/css/**", "/js/**", "/profile-templates/**").permitAll()
+                .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .antMatchers(
+                        "/",
+                        "/app",
+                        "/app/**",
+                        "/login.html",
+                        "/register.html",
+                        "/resume.html",
+                        "/public-share.html",
+                        "/css/**",
+                        "/js/**",
+                        "/profile-templates/**",
+                        "/favicon.ico"
+                ).permitAll()
                 .antMatchers("/actuator/health", "/actuator/info").permitAll()
                 .antMatchers("/api/auth/login", "/api/auth/register", "/api/public/**").permitAll()
                 .anyRequest().authenticated()
@@ -54,7 +66,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                     if (isApiRequest(request.getRequestURI())) {
                         writeJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, "Not authenticated");
                     } else {
-                        response.sendRedirect("/login.html");
+                        response.sendRedirect("/app/");
                     }
                 })
                 .accessDeniedHandler((request, response, exception) -> {
@@ -66,12 +78,12 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 })
                 .and()
                 .formLogin()
-                .loginPage("/login.html")
+                .loginPage("/app/")
                 .permitAll()
                 .and()
                 .logout()
                 .logoutUrl("/api/auth/logout")
-                .logoutSuccessUrl("/login.html")
+                .logoutSuccessUrl("/app/")
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID")
                 .permitAll();

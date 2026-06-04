@@ -15,12 +15,15 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.ArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -125,6 +128,22 @@ class ResumePortalApplicationTests {
 
         mockMvc.perform(get("/view/bob"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "alice")
+    void authenticatedUserCanExportTemplatePdf() throws Exception {
+        createUserAndProfile("alice");
+
+        byte[] pdf = mockMvc.perform(get("/api/profile/export/pdf"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andReturn()
+                .getResponse()
+                .getContentAsByteArray();
+
+        String fileHeader = new String(Arrays.copyOf(pdf, 4), StandardCharsets.US_ASCII);
+        assertThat(fileHeader).isEqualTo("%PDF");
     }
 
     private void createUserAndProfile(String username) {

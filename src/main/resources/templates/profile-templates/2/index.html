@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width"/>
     <title>One Page Resume</title>
     <style>
         * { margin: 0; padding: 0; }
-        body { font: 16px Helvetica, Sans-Serif; line-height: 24px; background: url(../profile-templates/2/images/noise.jpg); }
+        body { font: 16px Helvetica, Sans-Serif; line-height: 24px; background: url(/profile-templates/2/images/noise.jpg); }
         .clear { clear: both; }
         #page-wrap { width: 800px; margin: 40px auto 60px; }
         h1 { margin: 0 0 16px 0; padding: 0 0 16px 0; font-size: 42px; font-weight: bold; letter-spacing: 0; border-bottom: 1px solid #999; }
@@ -31,12 +31,12 @@
         <h1 class="fn">
             <span th:text="${userProfile.firstName}">First</span>
             <span th:text="${userProfile.lastName}">Last</span>
-            <a class="actions" th:if="${currentUsersProfile}" href="/edit">Edit</a>
-            <a class="actions button-link" th:if="${currentUsersProfile}" th:href="@{/export/pdf/{userId}(userId=${userId})}">Export PDF</a>
+            <a class="actions" th:if="${currentUsersProfile}" href="/app/resume">Edit</a>
+            <a class="actions button-link" th:if="${currentUsersProfile}" href="/api/profile/export/pdf">Export PDF</a>
         </h1>
 
         <p>
-            Cell: <span class="tel" th:text="${userProfile.phone}">555-666-7777</span><br>
+            Cell: <span class="tel" th:text="${userProfile.phone}">555-666-7777</span><br/>
             Email: <a th:text="${userProfile.email}" th:href="'mailto:' + ${userProfile.email}" class="email">name@example.com</a>
         </p>
     </div>
@@ -55,7 +55,7 @@
             <div th:each="education : ${userProfile.educations}">
                 <h2 th:text="${education.college}">College</h2>
                 <p>
-                    <strong th:text="${education.qualification}">Qualification</strong><br>
+                    <strong th:text="${education.qualification}">Qualification</strong><br/>
                     <span th:text="${education.formattedStartDate}">Jan 2020</span>
                     <span th:if="${education.formattedStartDate != null or education.formattedEndDate != null}"> - </span>
                     <span th:text="${education.formattedEndDate}">Dec 2022</span>
