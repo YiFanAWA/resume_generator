@@ -17,7 +17,7 @@ Resume Generator is a Spring Boot + React resume builder. The current version ha
 
 - User registration, login, logout, and current session check.
 - Resume profile editing for basic info, work experience, education, skills, and theme.
-- Public share link generation, revocation, and token-based public resume view.
+- Public share link generation, revocation, password protection, expiration, view limits, and token-based public resume view.
 - PDF export based on existing resume templates.
 - React frontend for login, register, editor, preview, share link management, and public share page.
 - H2-backed MockMvc tests for core API behavior.
@@ -171,8 +171,10 @@ GET  /api/profile/export/pdf
 
 GET  /api/profile/share
 POST /api/profile/share/generate
+PUT  /api/profile/share/settings
 POST /api/profile/share/revoke
 GET  /api/public/{shareToken}
+POST /api/public/{shareToken}/access
 ```
 
 ## Verification
@@ -205,6 +207,7 @@ The current priority is to keep the architecture stable before adding heavier hi
 - Keep React as the main UI and Spring Boot as the API backend.
 - Re-run the load-test baseline after enabling Redis-backed public resume cache.
 - Add cache hit/miss metrics for `/api/public/{shareToken}`.
+- Move high-volume public view counting to Redis or asynchronous batch persistence if share traffic grows.
 - Move PDF export to asynchronous jobs only after measuring actual latency and concurrency pressure.
 
 See `docs/CURRENT_STABILIZATION_PLAN.md` and `docs/FEATURE_ROADMAP.md` for details.

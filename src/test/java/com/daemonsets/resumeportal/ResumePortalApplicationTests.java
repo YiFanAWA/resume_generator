@@ -17,6 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -144,6 +145,11 @@ class ResumePortalApplicationTests {
 
     @Test
     void publicResumeCanBeServedFromCache() throws Exception {
+        UserProfile profile = createUserAndProfile("cached");
+        profile.setPublic(true);
+        profile.setShareToken("cached-token");
+        userProfileRepository.save(profile);
+
         Map<String, Object> cachedResume = new LinkedHashMap<>();
         cachedResume.put("firstName", "Cached");
         cachedResume.put("lastName", "Resume");
@@ -161,6 +167,7 @@ class ResumePortalApplicationTests {
                 .andExpect(jsonPath("$.skills[0]").value("Redis"));
 
         verify(publicResumeCacheService, never()).put(anyString(), anyMap());
+        assertThat(userProfileRepository.findByShareToken("cached-token").orElseThrow().getShareViewCount()).isEqualTo(1);
     }
 
     @Test
@@ -181,6 +188,108 @@ class ResumePortalApplicationTests {
                 .andExpect(status().isOk());
 
         verify(publicResumeCacheService, atLeastOnce()).evict(shareToken);
+    }
+
+    @Test
+    @WithMockUser(username = "alice")
+    void passwordProtectedShareRequiresCorrectPassword() throws Exception {
+        createUserAndProfile("alice");
+        String generateResponse = mockMvc.perform(post("/api/profile/share/generate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"secret123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sharePasswordProtected").value(true))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String shareToken = objectMapper.readTree(generateResponse).get("shareToken").asText();
+
+        mockMvc.perform(get("/api/public/" + shareToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.requiresPassword").value(true));
+
+        mockMvc.perform(post("/api/public/" + shareToken + "/access")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"wrong\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.requiresPassword").value(true));
+
+        mockMvc.perform(post("/api/public/" + shareToken + "/access")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"secret123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstName").value("Alice"))
+                .andExpect(jsonPath("$.email").doesNotExist());
+
+        UserProfile profile = userProfileRepository.findByShareToken(shareToken).orElseThrow();
+        assertThat(profile.getShareViewCount()).isEqualTo(1);
+        assertThat(profile.getShareLastViewedAt()).isNotNull();
+    }
+
+    @Test
+    @WithMockUser(username = "alice")
+    void shareViewLimitIsEnforced() throws Exception {
+        createUserAndProfile("alice");
+        String generateResponse = mockMvc.perform(post("/api/profile/share/generate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"maxViews\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shareMaxViews").value(1))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String shareToken = objectMapper.readTree(generateResponse).get("shareToken").asText();
+
+        mockMvc.perform(get("/api/public/" + shareToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/public/" + shareToken))
+                .andExpect(status().isGone())
+                .andExpect(jsonPath("$.error").value("Share link view limit has been reached"));
+    }
+
+    @Test
+    @WithMockUser(username = "alice")
+    void expiredShareLinkIsRejected() throws Exception {
+        createUserAndProfile("alice");
+        String expiredAt = LocalDateTime.now().minusMinutes(1).withNano(0).toString();
+        String generateResponse = mockMvc.perform(post("/api/profile/share/generate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"expiresAt\":\"" + expiredAt + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shareExpired").value(true))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String shareToken = objectMapper.readTree(generateResponse).get("shareToken").asText();
+
+        mockMvc.perform(get("/api/public/" + shareToken))
+                .andExpect(status().isGone())
+                .andExpect(jsonPath("$.error").value("Share link has expired"));
+    }
+
+    @Test
+    @WithMockUser(username = "alice")
+    void shareSettingsCanBeUpdatedAndPasswordCleared() throws Exception {
+        createUserAndProfile("alice");
+        String generateResponse = mockMvc.perform(post("/api/profile/share/generate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"secret123\",\"maxViews\":5}"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String shareToken = objectMapper.readTree(generateResponse).get("shareToken").asText();
+
+        mockMvc.perform(put("/api/profile/share/settings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"clearPassword\":true,\"maxViews\":\"\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sharePasswordProtected").value(false))
+                .andExpect(jsonPath("$.shareMaxViews").doesNotExist());
+
+        mockMvc.perform(get("/api/public/" + shareToken))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -215,7 +324,7 @@ class ResumePortalApplicationTests {
         }
     }
 
-    private void createUserAndProfile(String username) {
+    private UserProfile createUserAndProfile(String username) {
         User user = new User();
         user.setUserName(username);
         user.setPassword(passwordEncoder.encode("password123"));
@@ -233,7 +342,7 @@ class ResumePortalApplicationTests {
         profile.setJobs(new ArrayList<>());
         profile.setEducations(new ArrayList<>());
         profile.setSkills(new ArrayList<>());
-        userProfileRepository.save(profile);
+        return userProfileRepository.save(profile);
     }
 
     private String capitalize(String value) {

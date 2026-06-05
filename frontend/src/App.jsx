@@ -8,7 +8,8 @@ import {
   me,
   register,
   revokeShareLink,
-  saveProfile
+  saveProfile,
+  updateShareSettings
 } from "./api";
 
 const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -26,7 +27,14 @@ const emptyProfile = {
   skills: [],
   isPublic: false,
   shareToken: null,
-  shareUrl: null
+  shareUrl: null,
+  shareExpiresAt: null,
+  shareMaxViews: null,
+  shareViewCount: 0,
+  shareLastViewedAt: null,
+  sharePasswordProtected: false,
+  shareExpired: false,
+  shareLimitReached: false
 };
 
 function routeFromLocation() {
@@ -333,11 +341,21 @@ function Dashboard({ username, onLogout, showNotice }) {
     }
   };
 
-  const generateShare = async () => {
+  const generateShare = async (settings = {}) => {
     try {
-      const share = await generateShareLink();
+      const share = await generateShareLink(settings);
       setProfile((current) => ({ ...current, ...share }));
       showNotice("Share link is active.");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const saveShareSettings = async (settings = {}) => {
+    try {
+      const share = await updateShareSettings(settings);
+      setProfile((current) => ({ ...current, ...share }));
+      showNotice("Share settings saved.");
     } catch (err) {
       setError(err.message);
     }
@@ -398,6 +416,7 @@ function Dashboard({ username, onLogout, showNotice }) {
           <SharePanel
             profile={profile}
             generateShare={generateShare}
+            saveShareSettings={saveShareSettings}
             revokeShare={revokeShare}
             copyShare={copyShare}
           />
@@ -577,8 +596,34 @@ function CollectionSection({ title, addLabel, onAdd, children }) {
   );
 }
 
-function SharePanel({ profile, generateShare, revokeShare, copyShare }) {
+function SharePanel({ profile, generateShare, saveShareSettings, revokeShare, copyShare }) {
   const shareUrl = profile.shareUrl ? new URL(profile.shareUrl, window.location.origin).toString() : "";
+  const [expiresAt, setExpiresAt] = useState(toDateTimeLocal(profile.shareExpiresAt));
+  const [maxViews, setMaxViews] = useState(profile.shareMaxViews || "");
+  const [password, setPassword] = useState("");
+  const [clearPassword, setClearPassword] = useState(false);
+
+  useEffect(() => {
+    setExpiresAt(toDateTimeLocal(profile.shareExpiresAt));
+    setMaxViews(profile.shareMaxViews || "");
+    setPassword("");
+    setClearPassword(false);
+  }, [profile.shareExpiresAt, profile.shareMaxViews, profile.shareToken]);
+
+  const settingsPayload = () => ({
+    expiresAt: expiresAt || null,
+    maxViews: maxViews || null,
+    password,
+    clearPassword
+  });
+
+  const submitSettings = () => {
+    if (profile.isPublic) {
+      saveShareSettings(settingsPayload());
+    } else {
+      generateShare(settingsPayload());
+    }
+  };
 
   return (
     <section className="share-panel">
@@ -586,15 +631,61 @@ function SharePanel({ profile, generateShare, revokeShare, copyShare }) {
         <p className="eyebrow">Public link</p>
         <h2>{profile.isPublic ? "Share is active" : "Share is private"}</h2>
         <p>{profile.isPublic ? shareUrl : "Generate a tokenized public resume link when you are ready."}</p>
+        {profile.isPublic && (
+          <div className="share-stats">
+            <span>Views: {profile.shareViewCount || 0}{profile.shareMaxViews ? ` / ${profile.shareMaxViews}` : ""}</span>
+            <span>Password: {profile.sharePasswordProtected ? "Enabled" : "Off"}</span>
+            <span>Expires: {profile.shareExpiresAt ? formatDateTime(profile.shareExpiresAt) : "Never"}</span>
+            {profile.shareLastViewedAt && <span>Last viewed: {formatDateTime(profile.shareLastViewedAt)}</span>}
+          </div>
+        )}
       </div>
+
+      <div className="share-settings">
+        <label>
+          Expires at
+          <input type="datetime-local" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} />
+        </label>
+        <label>
+          Max views
+          <input
+            type="number"
+            min="1"
+            value={maxViews}
+            onChange={(event) => setMaxViews(event.target.value)}
+            placeholder="Unlimited"
+          />
+        </label>
+        <label>
+          {profile.sharePasswordProtected ? "New password" : "Password"}
+          <input
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder={profile.sharePasswordProtected ? "Leave blank to keep current" : "Optional"}
+          />
+        </label>
+        {profile.sharePasswordProtected && (
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={clearPassword}
+              onChange={(event) => setClearPassword(event.target.checked)}
+            />
+            Remove password
+          </label>
+        )}
+      </div>
+
       <div className="button-row">
         {profile.isPublic ? (
           <>
+            <button className="ghost-button compact" onClick={submitSettings}>Save settings</button>
             <button className="ghost-button compact" onClick={copyShare}>Copy</button>
             <button className="ghost-button compact danger" onClick={revokeShare}>Revoke</button>
           </>
         ) : (
-          <button className="ghost-button compact" onClick={generateShare}>Generate</button>
+          <button className="ghost-button compact" onClick={submitSettings}>Generate</button>
         )}
       </div>
     </section>
@@ -604,7 +695,34 @@ function SharePanel({ profile, generateShare, revokeShare, copyShare }) {
 function PublicSharePage() {
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState("");
+  const [passwordRequired, setPasswordRequired] = useState(false);
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
   const token = new URLSearchParams(window.location.search).get("token");
+
+  const loadPublicProfile = async (sharePassword) => {
+    if (!token) {
+      setError("Missing share token.");
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+    try {
+      const data = await getPublicProfile(token, sharePassword);
+      setProfile(hydrateProfile(data));
+      setPasswordRequired(false);
+    } catch (err) {
+      if (err.status === 401 && err.data?.requiresPassword) {
+        setPasswordRequired(true);
+        setError(sharePassword ? err.message : "");
+      } else {
+        setError(err.message);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!token) {
@@ -617,19 +735,63 @@ function PublicSharePage() {
       .then((data) => {
         if (active) {
           setProfile(hydrateProfile(data));
+          setPasswordRequired(false);
         }
       })
-      .catch((err) => setError(err.message));
+      .catch((err) => {
+        if (!active) {
+          return;
+        }
+        if (err.status === 401 && err.data?.requiresPassword) {
+          setPasswordRequired(true);
+          setError("");
+        } else {
+          setError(err.message);
+        }
+      });
 
     return () => {
       active = false;
     };
   }, [token]);
 
+  const submitPassword = (event) => {
+    event.preventDefault();
+    loadPublicProfile(password);
+  };
+
   return (
     <main className="public-shell">
       <button className="text-button" onClick={() => navigate("/login")}>Back to login</button>
-      {error ? <p className="inline-error">{error}</p> : profile ? <ResumePreview profile={profile} publicMode /> : <Splash />}
+      {passwordRequired ? (
+        <section className="auth-panel password-panel">
+          <p className="eyebrow">Protected resume</p>
+          <h2>Password required</h2>
+          <p>This public resume is protected. Enter the share password to continue.</p>
+          <form onSubmit={submitPassword}>
+            <label>
+              Share password
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoFocus
+                required
+              />
+            </label>
+            {error && <p className="form-error">{error}</p>}
+            <button className="primary-button" disabled={busy}>
+              {busy ? "Checking..." : "Unlock resume"}
+            </button>
+          </form>
+        </section>
+      ) : error ? (
+        <p className="inline-error">{error}</p>
+      ) : profile ? (
+        <ResumePreview profile={profile} publicMode />
+      ) : (
+        <Splash />
+      )}
     </main>
   );
 }
@@ -763,6 +925,25 @@ function dateRange(item) {
     return "";
   }
   return [start, end].filter(Boolean).join(" - ");
+}
+
+function toDateTimeLocal(value) {
+  if (!value) {
+    return "";
+  }
+  return value.slice(0, 16);
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return "";
+  }
+  const normalized = value.length === 16 ? `${value}:00` : value;
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return value.replace("T", " ");
+  }
+  return parsed.toLocaleString();
 }
 
 function filenameFrom(response) {

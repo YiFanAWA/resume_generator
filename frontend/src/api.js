@@ -1,3 +1,12 @@
+export class ApiError extends Error {
+  constructor(message, status, data) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.data = data;
+  }
+}
+
 async function request(path, options = {}) {
   const { body, responseType = "json", ...fetchOptions } = options;
   const response = await fetch(path, {
@@ -11,7 +20,8 @@ async function request(path, options = {}) {
   });
 
   if (!response.ok) {
-    throw new Error(await readError(response));
+    const errorData = await readErrorData(response);
+    throw new ApiError(errorData.message, response.status, errorData.data);
   }
 
   if (responseType === "blob") {
@@ -25,12 +35,18 @@ async function request(path, options = {}) {
   return response.json();
 }
 
-async function readError(response) {
+async function readErrorData(response) {
   try {
     const data = await response.json();
-    return data.error || data.message || response.statusText;
+    return {
+      data,
+      message: data.error || data.message || response.statusText
+    };
   } catch {
-    return response.statusText || "Request failed";
+    return {
+      data: null,
+      message: response.statusText || "Request failed"
+    };
   }
 }
 
@@ -69,9 +85,17 @@ export function saveProfile(profile) {
   });
 }
 
-export function generateShareLink() {
+export function generateShareLink(settings = {}) {
   return request("/api/profile/share/generate", {
-    method: "POST"
+    method: "POST",
+    body: settings
+  });
+}
+
+export function updateShareSettings(settings = {}) {
+  return request("/api/profile/share/settings", {
+    method: "PUT",
+    body: settings
   });
 }
 
@@ -81,6 +105,13 @@ export function revokeShareLink() {
   });
 }
 
-export function getPublicProfile(token) {
+export function getPublicProfile(token, password) {
+  if (password) {
+    return request(`/api/public/${encodeURIComponent(token)}/access`, {
+      method: "POST",
+      body: { password }
+    });
+  }
+
   return request(`/api/public/${encodeURIComponent(token)}`);
 }

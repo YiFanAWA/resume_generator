@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -44,6 +45,21 @@ public class UserProfile {
     @Column(name = "share_token", unique = true, length = 64)
     private String shareToken;
 
+    @Column(name = "share_password_hash", length = 100)
+    private String sharePasswordHash;
+
+    @Column(name = "share_expires_at")
+    private LocalDateTime shareExpiresAt;
+
+    @Column(name = "share_max_views")
+    private Integer shareMaxViews;
+
+    @Column(name = "share_view_count")
+    private long shareViewCount = 0;
+
+    @Column(name = "share_last_viewed_at")
+    private LocalDateTime shareLastViewedAt;
+
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "user_profile_id")
     @Builder.Default
@@ -67,5 +83,27 @@ public class UserProfile {
     public void revokeShareToken() {
         this.shareToken = null;
         this.isPublic = false;
+        this.sharePasswordHash = null;
+        this.shareExpiresAt = null;
+        this.shareMaxViews = null;
+        this.shareViewCount = 0;
+        this.shareLastViewedAt = null;
+    }
+
+    public boolean hasSharePassword() {
+        return this.sharePasswordHash != null && !this.sharePasswordHash.isBlank();
+    }
+
+    public boolean isShareExpired() {
+        return this.shareExpiresAt != null && !this.shareExpiresAt.isAfter(LocalDateTime.now());
+    }
+
+    public boolean isShareViewLimitReached() {
+        return this.shareMaxViews != null && this.shareMaxViews > 0 && this.shareViewCount >= this.shareMaxViews;
+    }
+
+    public void recordShareView() {
+        this.shareViewCount++;
+        this.shareLastViewedAt = LocalDateTime.now();
     }
 }

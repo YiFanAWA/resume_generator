@@ -19,4 +19,8 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, Intege
 
     Optional<UserProfile> findByShareToken(String shareToken);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select profile from UserProfile profile where profile.shareToken = :shareToken")
+    Optional<UserProfile> findByShareTokenForUpdate(@Param("shareToken") String shareToken);
+
 }

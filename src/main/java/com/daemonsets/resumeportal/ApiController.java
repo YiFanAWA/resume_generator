@@ -29,6 +29,8 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletRequest;
 import java.security.Principal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -240,7 +242,7 @@ public class ApiController {
 
     @PostMapping("/profile/share/generate")
     @Transactional
-    public ResponseEntity<?> generateShareToken(Principal principal) {
+    public ResponseEntity<?> generateShareToken(@RequestBody(required = false) Map<String, Object> shareSettings, Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Not authenticated"));
         }
@@ -254,8 +256,33 @@ public class ApiController {
         String previousShareToken = profile.getShareToken();
         profile.generateShareToken();
         profile.setPublic(true);
+        applyShareSettings(profile, shareSettings);
         userProfileRepository.save(profile);
         evictPublicCacheAfterCommit(previousShareToken);
+        evictPublicCacheAfterCommit(profile.getShareToken());
+
+        return ResponseEntity.ok(toShareStatus(profile));
+    }
+
+    @PutMapping("/profile/share/settings")
+    @Transactional
+    public ResponseEntity<?> updateShareSettings(@RequestBody(required = false) Map<String, Object> shareSettings, Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Not authenticated"));
+        }
+
+        Optional<UserProfile> profileOpt = userProfileRepository.findByUserNameForUpdate(principal.getName());
+        if (profileOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        UserProfile profile = profileOpt.get();
+        if (profile.getShareToken() == null || !profile.isPublic()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Generate a share link before updating share settings"));
+        }
+
+        applyShareSettings(profile, shareSettings);
+        userProfileRepository.save(profile);
         evictPublicCacheAfterCommit(profile.getShareToken());
 
         return ResponseEntity.ok(toShareStatus(profile));
@@ -283,20 +310,58 @@ public class ApiController {
     }
 
     @GetMapping("/public/{shareToken}")
-    @Transactional(readOnly = true)
+    @Transactional
     public ResponseEntity<?> publicView(@PathVariable String shareToken) {
+        return resolvePublicView(shareToken, null);
+    }
+
+    @PostMapping("/public/{shareToken}/access")
+    @Transactional
+    public ResponseEntity<?> publicViewWithPassword(
+            @PathVariable String shareToken,
+            @RequestBody(required = false) Map<String, String> accessData
+    ) {
+        String password = accessData == null ? null : accessData.get("password");
+        return resolvePublicView(shareToken, password);
+    }
+
+    private ResponseEntity<?> resolvePublicView(String shareToken, String password) {
+        Optional<UserProfile> profileOpt = userProfileRepository.findByShareTokenForUpdate(shareToken);
+        if (profileOpt.isEmpty() || !profileOpt.get().isPublic()) {
+            return ResponseEntity.status(404).body(Map.of("error", "Resume not found or private"));
+        }
+
+        UserProfile profile = profileOpt.get();
+        if (profile.isShareExpired()) {
+            return ResponseEntity.status(410).body(Map.of("error", "Share link has expired"));
+        }
+        if (profile.isShareViewLimitReached()) {
+            return ResponseEntity.status(410).body(Map.of("error", "Share link view limit has been reached"));
+        }
+        if (profile.hasSharePassword()) {
+            if (password == null || password.isBlank()) {
+                return ResponseEntity.status(401).body(Map.of(
+                        "error", "Share password required",
+                        "requiresPassword", true
+                ));
+            }
+            if (!passwordEncoder.matches(password, profile.getSharePasswordHash())) {
+                return ResponseEntity.status(401).body(Map.of(
+                        "error", "Incorrect share password",
+                        "requiresPassword", true
+                ));
+            }
+        }
+
+        profile.recordShareView();
+        userProfileRepository.save(profile);
+
         Optional<Map<String, Object>> cachedProfile = publicResumeCacheService.get(shareToken);
         if (cachedProfile.isPresent()) {
             return ResponseEntity.ok(cachedProfile.get());
         }
 
-        Optional<UserProfile> profileOpt = userProfileRepository.findByShareToken(shareToken);
-
-        if (profileOpt.isEmpty() || !profileOpt.get().isPublic()) {
-            return ResponseEntity.status(404).body(Map.of("error", "Resume not found or private"));
-        }
-
-        Map<String, Object> response = toPublicProfile(profileOpt.get());
+        Map<String, Object> response = toPublicProfile(profile);
         publicResumeCacheService.put(shareToken, response);
         return ResponseEntity.ok(response);
     }
@@ -338,6 +403,13 @@ public class ApiController {
         response.put("shareToken", profile.getShareToken());
         response.put("shareUrl", profile.getShareToken() == null ? null : "/app/public-share?token=" + profile.getShareToken());
         response.put("isPublic", profile.isPublic());
+        response.put("shareExpiresAt", formatDateTime(profile.getShareExpiresAt()));
+        response.put("shareMaxViews", profile.getShareMaxViews());
+        response.put("shareViewCount", profile.getShareViewCount());
+        response.put("shareLastViewedAt", formatDateTime(profile.getShareLastViewedAt()));
+        response.put("sharePasswordProtected", profile.hasSharePassword());
+        response.put("shareExpired", profile.isShareExpired());
+        response.put("shareLimitReached", profile.isShareViewLimitReached());
         return response;
     }
 
@@ -384,7 +456,68 @@ public class ApiController {
         });
     }
 
+    private void applyShareSettings(UserProfile profile, Map<String, Object> shareSettings) {
+        if (shareSettings == null) {
+            return;
+        }
+
+        if (shareSettings.containsKey("expiresAt")) {
+            profile.setShareExpiresAt(parseExpiresAt(shareSettings.get("expiresAt")));
+        }
+        if (shareSettings.containsKey("maxViews")) {
+            profile.setShareMaxViews(parseMaxViews(shareSettings.get("maxViews")));
+        }
+        if (Boolean.TRUE.equals(asBoolean(shareSettings.get("clearPassword")))) {
+            profile.setSharePasswordHash(null);
+        } else if (shareSettings.containsKey("password")) {
+            Object passwordValue = shareSettings.get("password");
+            String password = passwordValue == null ? null : trimToNull(String.valueOf(passwordValue));
+            if (password != null) {
+                profile.setSharePasswordHash(passwordEncoder.encode(password));
+            }
+        }
+    }
+
+    private LocalDateTime parseExpiresAt(Object value) {
+        String rawValue = value == null ? null : trimToNull(String.valueOf(value));
+        if (rawValue == null) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(rawValue);
+        } catch (DateTimeParseException exception) {
+            throw new IllegalArgumentException("share expiration must use ISO local datetime format, for example 2026-06-05T18:30", exception);
+        }
+    }
+
+    private Integer parseMaxViews(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String rawValue = trimToNull(String.valueOf(value));
+        if (rawValue == null) {
+            return null;
+        }
+        try {
+            int maxViews = Integer.parseInt(rawValue);
+            return maxViews > 0 ? maxViews : null;
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("share max views must be a positive number", exception);
+        }
+    }
+
+    private Boolean asBoolean(Object value) {
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+        return value == null ? Boolean.FALSE : Boolean.parseBoolean(String.valueOf(value));
+    }
+
     private String formatIsoDate(LocalDate value) {
+        return value == null ? null : value.toString();
+    }
+
+    private String formatDateTime(LocalDateTime value) {
         return value == null ? null : value.toString();
     }
 
