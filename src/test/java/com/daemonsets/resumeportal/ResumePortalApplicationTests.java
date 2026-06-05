@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -16,10 +17,23 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -47,8 +61,13 @@ class ResumePortalApplicationTests {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @MockBean
+    private PublicResumeCacheService publicResumeCacheService;
+
     @BeforeEach
     void cleanDatabase() {
+        reset(publicResumeCacheService);
+        when(publicResumeCacheService.get(anyString())).thenReturn(Optional.empty());
         userProfileRepository.deleteAll();
         userRepository.deleteAll();
     }
@@ -111,13 +130,57 @@ class ResumePortalApplicationTests {
                 .andExpect(jsonPath("$.firstName").value("Alice"))
                 .andExpect(jsonPath("$.email").doesNotExist())
                 .andExpect(jsonPath("$.phone").doesNotExist());
+        verify(publicResumeCacheService).put(eq(shareToken), anyMap());
 
+        clearInvocations(publicResumeCacheService);
         mockMvc.perform(post("/api/profile/share/revoke"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isPublic").value(false));
+        verify(publicResumeCacheService, atLeastOnce()).evict(shareToken);
 
         mockMvc.perform(get("/api/public/" + shareToken))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void publicResumeCanBeServedFromCache() throws Exception {
+        Map<String, Object> cachedResume = new LinkedHashMap<>();
+        cachedResume.put("firstName", "Cached");
+        cachedResume.put("lastName", "Resume");
+        cachedResume.put("designation", "Engineer");
+        cachedResume.put("summary", "Loaded from cache");
+        cachedResume.put("jobs", List.of());
+        cachedResume.put("educations", List.of());
+        cachedResume.put("skills", List.of("Redis"));
+        cachedResume.put("theme", 1);
+        when(publicResumeCacheService.get("cached-token")).thenReturn(Optional.of(cachedResume));
+
+        mockMvc.perform(get("/api/public/cached-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstName").value("Cached"))
+                .andExpect(jsonPath("$.skills[0]").value("Redis"));
+
+        verify(publicResumeCacheService, never()).put(anyString(), anyMap());
+    }
+
+    @Test
+    @WithMockUser(username = "alice")
+    void updatingPublicProfileEvictsCachedPublicResume() throws Exception {
+        createUserAndProfile("alice");
+        String generateResponse = mockMvc.perform(post("/api/profile/share/generate"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String shareToken = objectMapper.readTree(generateResponse).get("shareToken").asText();
+
+        clearInvocations(publicResumeCacheService);
+        mockMvc.perform(put("/api/profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstName\":\"Alice\",\"lastName\":\"Updated\",\"theme\":2,\"skills\":[\"Java\",\"Redis\"]}"))
+                .andExpect(status().isOk());
+
+        verify(publicResumeCacheService, atLeastOnce()).evict(shareToken);
     }
 
     @Test
@@ -135,15 +198,21 @@ class ResumePortalApplicationTests {
     void authenticatedUserCanExportTemplatePdf() throws Exception {
         createUserAndProfile("alice");
 
-        byte[] pdf = mockMvc.perform(get("/api/profile/export/pdf"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
-                .andReturn()
-                .getResponse()
-                .getContentAsByteArray();
+        for (int theme = 1; theme <= 3; theme++) {
+            UserProfile profile = userProfileRepository.findByUserName("alice").orElseThrow();
+            profile.setTheme(theme);
+            userProfileRepository.save(profile);
 
-        String fileHeader = new String(Arrays.copyOf(pdf, 4), StandardCharsets.US_ASCII);
-        assertThat(fileHeader).isEqualTo("%PDF");
+            byte[] pdf = mockMvc.perform(get("/api/profile/export/pdf"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsByteArray();
+
+            String fileHeader = new String(Arrays.copyOf(pdf, 4), StandardCharsets.US_ASCII);
+            assertThat(fileHeader).isEqualTo("%PDF");
+        }
     }
 
     private void createUserAndProfile(String username) {

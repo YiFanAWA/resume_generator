@@ -31,6 +31,9 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173}")
     private String allowedOrigins;
 
+    @Value("${app.security.require-https:false}")
+    private boolean requireHttps;
+
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         auth.userDetailsService(userDetailsService)
@@ -87,6 +90,18 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID")
                 .permitAll();
+
+        http.headers().contentTypeOptions();
+        http.headers().frameOptions().sameOrigin();
+        http.headers().httpStrictTransportSecurity()
+                .includeSubDomains(true)
+                .maxAgeInSeconds(31536000);
+
+        if (requireHttps) {
+            http.requiresChannel()
+                    .anyRequest()
+                    .requiresSecure();
+        }
     }
 
     @Bean

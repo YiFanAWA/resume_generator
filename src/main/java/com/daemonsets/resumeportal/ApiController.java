@@ -16,6 +16,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import java.security.Principal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,6 +55,9 @@ public class ApiController {
 
     @Autowired
     private PdfExportService pdfExportService;
+
+    @Autowired
+    private PublicResumeCacheService publicResumeCacheService;
 
     @PostMapping("/auth/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> credentials, HttpServletRequest request) {
@@ -154,12 +160,13 @@ public class ApiController {
             return ResponseEntity.status(401).body(Map.of("error", "Not authenticated"));
         }
 
-        Optional<UserProfile> existingProfileOpt = userProfileRepository.findByUserName(principal.getName());
+        Optional<UserProfile> existingProfileOpt = userProfileRepository.findByUserNameForUpdate(principal.getName());
         if (existingProfileOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
         UserProfile existingProfile = existingProfileOpt.get();
+        String shareToken = existingProfile.getShareToken();
         existingProfile.setFirstName(trimToNull(userProfile.getFirstName()));
         existingProfile.setLastName(trimToNull(userProfile.getLastName()));
         existingProfile.setEmail(trimToNull(userProfile.getEmail()));
@@ -187,6 +194,7 @@ public class ApiController {
         }
 
         userProfileRepository.save(existingProfile);
+        evictPublicCacheAfterCommit(shareToken);
         return ResponseEntity.ok(Map.of("message", "Profile updated successfully"));
     }
 
@@ -231,38 +239,45 @@ public class ApiController {
     }
 
     @PostMapping("/profile/share/generate")
+    @Transactional
     public ResponseEntity<?> generateShareToken(Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Not authenticated"));
         }
 
-        Optional<UserProfile> profileOpt = userProfileRepository.findByUserName(principal.getName());
+        Optional<UserProfile> profileOpt = userProfileRepository.findByUserNameForUpdate(principal.getName());
         if (profileOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
         UserProfile profile = profileOpt.get();
+        String previousShareToken = profile.getShareToken();
         profile.generateShareToken();
         profile.setPublic(true);
         userProfileRepository.save(profile);
+        evictPublicCacheAfterCommit(previousShareToken);
+        evictPublicCacheAfterCommit(profile.getShareToken());
 
         return ResponseEntity.ok(toShareStatus(profile));
     }
 
     @PostMapping("/profile/share/revoke")
+    @Transactional
     public ResponseEntity<?> revokeShareToken(Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Not authenticated"));
         }
 
-        Optional<UserProfile> profileOpt = userProfileRepository.findByUserName(principal.getName());
+        Optional<UserProfile> profileOpt = userProfileRepository.findByUserNameForUpdate(principal.getName());
         if (profileOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
         UserProfile profile = profileOpt.get();
+        String previousShareToken = profile.getShareToken();
         profile.revokeShareToken();
         userProfileRepository.save(profile);
+        evictPublicCacheAfterCommit(previousShareToken);
 
         return ResponseEntity.ok(toShareStatus(profile));
     }
@@ -270,13 +285,20 @@ public class ApiController {
     @GetMapping("/public/{shareToken}")
     @Transactional(readOnly = true)
     public ResponseEntity<?> publicView(@PathVariable String shareToken) {
+        Optional<Map<String, Object>> cachedProfile = publicResumeCacheService.get(shareToken);
+        if (cachedProfile.isPresent()) {
+            return ResponseEntity.ok(cachedProfile.get());
+        }
+
         Optional<UserProfile> profileOpt = userProfileRepository.findByShareToken(shareToken);
 
         if (profileOpt.isEmpty() || !profileOpt.get().isPublic()) {
             return ResponseEntity.status(404).body(Map.of("error", "Resume not found or private"));
         }
 
-        return ResponseEntity.ok(toPublicProfile(profileOpt.get()));
+        Map<String, Object> response = toPublicProfile(profileOpt.get());
+        publicResumeCacheService.put(shareToken, response);
+        return ResponseEntity.ok(response);
     }
 
     private void upgradeLegacyPasswordIfNeeded(String username, String rawPassword) {
@@ -323,8 +345,8 @@ public class ApiController {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("company", job.getCompany());
         response.put("designation", job.getDesignation());
-        response.put("startDate", job.getStartDate());
-        response.put("endDate", job.getEndDate());
+        response.put("startDate", formatIsoDate(job.getStartDate()));
+        response.put("endDate", formatIsoDate(job.getEndDate()));
         response.put("currentJob", job.isCurrentJob());
         response.put("formattedStartDate", job.getFormattedStartDate());
         response.put("formattedEndDate", job.getFormattedEndDate());
@@ -336,12 +358,34 @@ public class ApiController {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("college", education.getCollege());
         response.put("qualification", education.getQualification());
-        response.put("startDate", education.getStartDate());
-        response.put("endDate", education.getEndDate());
+        response.put("startDate", formatIsoDate(education.getStartDate()));
+        response.put("endDate", formatIsoDate(education.getEndDate()));
         response.put("formattedStartDate", education.getFormattedStartDate());
         response.put("formattedEndDate", education.getFormattedEndDate());
         response.put("summary", education.getSummary());
         return response;
+    }
+
+    private void evictPublicCacheAfterCommit(String shareToken) {
+        if (shareToken == null || shareToken.isBlank()) {
+            return;
+        }
+
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            publicResumeCacheService.evict(shareToken);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                publicResumeCacheService.evict(shareToken);
+            }
+        });
+    }
+
+    private String formatIsoDate(LocalDate value) {
+        return value == null ? null : value.toString();
     }
 
     private String trimToNull(String value) {

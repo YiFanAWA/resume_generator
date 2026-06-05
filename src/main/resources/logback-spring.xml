@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <springProperty scope="context" name="LOG_FILE" source="logging.file.name" defaultValue="logs/resume-generator.log"/>
+    <springProperty scope="context" name="ROOT_LOG_LEVEL" source="logging.level.root" defaultValue="INFO"/>
+    <springProperty scope="context" name="APP_LOG_LEVEL" source="logging.level.com.daemonsets.resumeportal" defaultValue="INFO"/>
+    <springProperty scope="context" name="PDF_RENDERER_LOG_LEVEL" source="logging.level.com.openhtmltopdf" defaultValue="WARN"/>
+    <springProperty scope="context" name="PDFBOX_LOG_LEVEL" source="logging.level.org.apache.pdfbox" defaultValue="WARN"/>
+    <springProperty scope="context" name="PDFBOX_FONT_LOG_LEVEL" source="logging.level.org.apache.pdfbox.pdmodel.font.FileSystemFontProvider" defaultValue="ERROR"/>
+    <springProperty scope="context" name="LOG_FILE_MAX_SIZE" source="app.logging.file.max-size" defaultValue="10MB"/>
+    <springProperty scope="context" name="LOG_FILE_MAX_HISTORY" source="app.logging.file.max-history" defaultValue="14"/>
+    <springProperty scope="context" name="LOG_FILE_TOTAL_SIZE_CAP" source="app.logging.file.total-size-cap" defaultValue="1GB"/>
+
+    <appender name="ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
+            <maxFileSize>${LOG_FILE_MAX_SIZE}</maxFileSize>
+            <maxHistory>${LOG_FILE_MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${LOG_FILE_TOTAL_SIZE_CAP}</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <logger name="com.daemonsets.resumeportal" level="${APP_LOG_LEVEL}"/>
+    <logger name="com.openhtmltopdf" level="${PDF_RENDERER_LOG_LEVEL}"/>
+    <logger name="org.apache.pdfbox" level="${PDFBOX_LOG_LEVEL}"/>
+    <logger name="org.apache.pdfbox.pdmodel.font.FileSystemFontProvider" level="${PDFBOX_FONT_LOG_LEVEL}"/>
+
+    <root level="${ROOT_LOG_LEVEL}">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ROLLING_FILE"/>
+    </root>
+</configuration>

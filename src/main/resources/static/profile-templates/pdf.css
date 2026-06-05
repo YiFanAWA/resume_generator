@@ -1,0 +1,299 @@
+@page {
+  size: A4;
+  margin: 15mm;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #ffffff;
+  color: #222222;
+  font-family: "ResumeCjk", "Noto Sans", Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.45;
+}
+
+a {
+  color: #222222;
+  text-decoration: none;
+}
+
+p {
+  margin: 0 0 8pt;
+}
+
+ul {
+  margin: 4pt 0 10pt 16pt;
+  padding: 0;
+}
+
+li {
+  margin: 0 0 3pt;
+}
+
+.clear {
+  clear: both;
+}
+
+/* Template 1 */
+#cv {
+  width: 100%;
+}
+
+.mainDetails {
+  padding-bottom: 10pt;
+  border-bottom: 2pt solid #cf8a05;
+}
+
+#name {
+  float: left;
+  width: 58%;
+}
+
+#name h1,
+#hd h1,
+.fn {
+  margin: 0;
+  color: #111111;
+  font-size: 24pt;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+#name h2,
+#hd h2 {
+  margin: 4pt 0 0;
+  color: #444444;
+  font-size: 13pt;
+  font-weight: 400;
+}
+
+#contactDetails {
+  float: right;
+  width: 36%;
+  text-align: right;
+}
+
+#contactDetails ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#mainArea {
+  padding-top: 14pt;
+}
+
+section {
+  padding: 10pt 0;
+  border-bottom: 0.5pt solid #dddddd;
+}
+
+.sectionTitle {
+  float: left;
+  width: 24%;
+}
+
+.sectionContent {
+  float: right;
+  width: 72%;
+}
+
+.sectionTitle h1,
+.resume-preview h3 {
+  margin: 0;
+  color: #b16f00;
+  font-size: 11pt;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.sectionContent h2 {
+  margin: 0 0 2pt;
+  font-size: 13pt;
+}
+
+.subDetails {
+  color: #666666;
+  font-size: 9pt;
+  font-style: italic;
+}
+
+.keySkills {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.keySkills li {
+  display: inline;
+  margin-right: 8pt;
+}
+
+/* Template 2 */
+#page-wrap {
+  width: 100%;
+  margin: 0;
+}
+
+#contact-info h1 {
+  margin: 0 0 10pt;
+  padding-bottom: 8pt;
+  border-bottom: 1pt solid #999999;
+  font-size: 26pt;
+}
+
+#objective {
+  float: none;
+  width: 100%;
+  margin: 10pt 0 14pt;
+  color: #555555;
+  font-style: italic;
+}
+
+dl {
+  margin: 0;
+}
+
+dt {
+  float: left;
+  width: 20%;
+  min-height: 42pt;
+  padding-right: 10pt;
+  border-right: 0.5pt solid #999999;
+  color: #333333;
+  font-size: 12pt;
+  font-style: italic;
+  font-weight: 700;
+  text-align: right;
+}
+
+dd {
+  float: right;
+  width: 74%;
+  margin: 0;
+}
+
+dd.clear {
+  float: none;
+  height: 10pt;
+}
+
+dd h2 {
+  margin: 0 0 4pt;
+  font-size: 13pt;
+}
+
+dd h2 span {
+  display: block;
+  color: #666666;
+  font-size: 9pt;
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Template 3 */
+#doc2,
+#inner {
+  width: 100%;
+  margin: 0;
+}
+
+#inner {
+  padding: 0;
+  border-top: 5pt solid #555555;
+}
+
+#hd {
+  padding: 12pt 0;
+  border-bottom: 1pt solid #cccccc;
+}
+
+.yui-u.first {
+  float: left;
+  width: 58%;
+}
+
+.yui-u {
+  float: right;
+  width: 38%;
+}
+
+.contact-info {
+  text-align: right;
+}
+
+.contact-info h3 {
+  margin: 0 0 3pt;
+  font-size: 10pt;
+  font-weight: 400;
+}
+
+.yui-gf {
+  clear: both;
+  padding: 12pt 0;
+  border-bottom: 0.5pt solid #cccccc;
+}
+
+.yui-gf .yui-u.first {
+  width: 18%;
+}
+
+.yui-gf .yui-u {
+  width: 76%;
+}
+
+.yui-gf h2 {
+  margin: 0;
+  color: #333333;
+  font-size: 12pt;
+  font-style: italic;
+}
+
+.job {
+  margin-bottom: 10pt;
+  padding-bottom: 8pt;
+  border-bottom: 0.5pt solid #dddddd;
+}
+
+.job h2,
+.job h3,
+.job h4 {
+  margin: 0 0 3pt;
+}
+
+.job h2 {
+  font-size: 13pt;
+}
+
+.job h3,
+.job h4 {
+  color: #666666;
+  font-size: 9pt;
+  font-weight: 400;
+}
+
+.talent {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.talent li {
+  display: inline;
+  margin-right: 8pt;
+  border: 0;
+}
+
+#ft {
+  clear: both;
+  padding-top: 12pt;
+  border-top: 1pt solid #cccccc;
+  color: #666666;
+  font-size: 9pt;
+  text-align: center;
+}

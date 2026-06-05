@@ -1,5 +1,6 @@
 package com.daemonsets.resumeportal;
 
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,6 +17,12 @@ public class ApiExceptionHandler {
         HttpStatus status = exception.getStatus();
         String message = exception.getReason() == null ? status.getReasonPhrase() : exception.getReason();
         return ResponseEntity.status(status).body(Map.of("error", message));
+    }
+
+    @ExceptionHandler(PessimisticLockingFailureException.class)
+    public ResponseEntity<?> handleConcurrentProfileWrite(PessimisticLockingFailureException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", "Profile is being updated by another request. Please retry shortly."));
     }
 
     @ExceptionHandler(Exception.class)

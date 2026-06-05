@@ -2,6 +2,7 @@ package com.daemonsets.resumeportal;
 
 import com.daemonsets.resumeportal.models.UserProfile;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import com.openhtmltopdf.util.XRLog;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -16,9 +17,20 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.regex.Pattern;
+import java.util.logging.Level;
 
 @Service
 public class PdfExportService {
+
+    private static final Pattern PROFILE_TEMPLATE_STYLESHEET = Pattern.compile(
+            "(?is)<link\\s+[^>]*profile-templates/[^>]*>"
+    );
+    private static final Pattern INLINE_STYLE_BLOCK = Pattern.compile("(?is)<style[^>]*>.*?</style>");
+
+    static {
+        XRLog.listRegisteredLoggers().forEach(logger -> XRLog.setLevel(logger, Level.WARNING));
+    }
 
     private final SpringTemplateEngine templateEngine;
     private final ResourceLoader resourceLoader;
@@ -73,7 +85,10 @@ public class PdfExportService {
                 .replace("url(/profile-templates/", "url(profile-templates/")
                 .replace("url(../profile-templates/", "url(profile-templates/");
 
-        String pdfStyle = "<style>@page{size:A4;margin:16mm;}body{font-family:'ResumeCjk',sans-serif;}</style>";
+        normalized = PROFILE_TEMPLATE_STYLESHEET.matcher(normalized).replaceAll("");
+        normalized = INLINE_STYLE_BLOCK.matcher(normalized).replaceAll("");
+
+        String pdfStyle = "<link rel=\"stylesheet\" href=\"profile-templates/pdf.css\"/>";
         return normalized.replace("</head>", pdfStyle + "</head>");
     }
 
