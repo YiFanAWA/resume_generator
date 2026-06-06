@@ -19,7 +19,7 @@ import java.util.UUID;
 @Table
 public class UserProfile {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
     @Column(nullable = false, unique = true, length = 100)

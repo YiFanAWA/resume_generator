@@ -11,6 +11,7 @@
 - 公开分享链路已可用。
 - `/api/public/{shareToken}` 已支持本地 Caffeine 缓存，并可切换 Redis 后端。
 - 分享链接已支持过期时间、访问密码、最大访问次数和访问统计。
+- Flyway、Docker Compose 和 CI 基线已接入。
 - 后端核心接口已有 MockMvc 测试。
 
 ## 第一阶段：稳定化和可观测基线
@@ -92,6 +93,20 @@
 - 使用自定义 `ThreadPoolTaskExecutor` 执行导出。
 
 等多实例部署或任务可靠性要求上升时，再引入 RabbitMQ。
+
+## 工程化基线
+
+已完成：
+
+- Flyway 管理数据库结构版本。
+- Docker Compose 一键启动 MySQL、Redis 和后端应用。
+- GitHub Actions 执行前端构建、后端测试和后端打包。
+
+后续优化：
+
+1. 用 Testcontainers 增加真实 MySQL/Redis 集成测试。
+2. CI 增加依赖漏洞扫描和 Docker 镜像构建。
+3. 生产部署时增加 Nginx、HTTPS、镜像仓库、灰度发布和回滚策略。
 
 ## 第五阶段：限流和监控
 

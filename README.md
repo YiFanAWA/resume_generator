@@ -8,6 +8,7 @@ Resume Generator is a Spring Boot + React resume builder. The current version ha
 - Backend: Spring Boot 2.3.1, Java 11, Spring MVC REST APIs.
 - Authentication: Spring Security session + cookie.
 - Persistence: Spring Data JPA + MySQL 8.
+- Database migrations: Flyway versioned SQL migrations.
 - Public resume cache: local Caffeine cache by default, optional Redis backend.
 - PDF export: Thymeleaf resume templates rendered to HTML, then converted to PDF with OpenHTMLToPDF.
 - Production static entry: React build output is served from `/app/`.
@@ -29,6 +30,8 @@ Start MySQL:
 ```bash
 docker run --name mysql-standalone -p 6603:3306 -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=resume-portal -d mysql
 ```
+
+The dev profile connects to `localhost:6603` by default. If your MySQL uses another port, set `DB_PORT` or `DB_URL`.
 
 Start backend:
 
@@ -108,6 +111,7 @@ Common environment variables:
 SPRING_PROFILES_ACTIVE
 SERVER_PORT
 DB_URL
+DB_PORT
 DB_USERNAME
 DB_PASSWORD
 CORS_ALLOWED_ORIGINS
@@ -119,6 +123,9 @@ DB_IDLE_TIMEOUT_MS
 DB_MAX_LIFETIME_MS
 SESSION_COOKIE_SECURE
 APP_SECURITY_REQUIRE_HTTPS
+FLYWAY_ENABLED
+FLYWAY_BASELINE_ON_MIGRATE
+FLYWAY_VALIDATE_ON_MIGRATE
 LOG_FILE
 ACCESS_LOG_ENABLED
 PUBLIC_RESUME_CACHE_ENABLED
@@ -128,6 +135,7 @@ PUBLIC_RESUME_CACHE_MAX_SIZE
 REDIS_HOST
 REDIS_PORT
 REDIS_TIMEOUT
+REDIS_HEALTH_ENABLED
 ```
 
 Default CORS origins for separated frontend development:
@@ -153,9 +161,25 @@ PUBLIC_RESUME_CACHE_BACKEND=redis
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_TIMEOUT=1s
+REDIS_HEALTH_ENABLED=true
 ```
 
 See `docs/DEPLOYMENT_PROFILES.md` for production profile details and recommended environment variables.
+
+## Docker Compose
+
+Copy the sample environment file and start the full local stack:
+
+```bash
+copy .env.example .env
+docker compose up -d --build
+```
+
+This starts MySQL, Redis, and the Spring Boot app. The React build is packaged into the backend image and served from:
+
+```text
+http://localhost:5000/app/
+```
 
 ## Main APIs
 
@@ -200,11 +224,14 @@ k6 run perf/k6/resume-baseline.js
 
 See `docs/PERFORMANCE_BASELINE.md` for the load-test workflow.
 
+CI verification is defined in `.github/workflows/ci.yml`. It runs the frontend build, backend tests, and backend package step.
+
 ## Next Iterations
 
 The current priority is to keep the architecture stable before adding heavier high-concurrency infrastructure:
 
 - Keep React as the main UI and Spring Boot as the API backend.
+- Use Flyway for all future schema changes instead of relying on Hibernate `ddl-auto=update`.
 - Re-run the load-test baseline after enabling Redis-backed public resume cache.
 - Add cache hit/miss metrics for `/api/public/{shareToken}`.
 - Move high-volume public view counting to Redis or asynchronous batch persistence if share traffic grows.

@@ -7,9 +7,11 @@
 | 文件 | 用途 |
 | --- | --- |
 | `application.properties` | 公共配置：端口、缓存、日志、Actuator、Session、通用连接池参数 |
-| `application-dev.properties` | 本地开发默认配置：本地 MySQL、localhost CORS、`ddl-auto=update` |
+| `application-dev.properties` | 本地开发默认配置：本地 MySQL、localhost CORS、Flyway + `ddl-auto=validate` |
 | `application-prod.properties` | 生产配置：数据库和 CORS 必须来自环境变量、`ddl-auto=validate`、Secure Cookie |
 | `application-test.properties` | 测试配置：H2、关闭真实缓存、测试日志输出到 `target/test-logs` |
+
+> 当前项目已接入 Flyway。dev/prod 环境都应优先使用 Flyway 管理表结构，Hibernate `ddl-auto` 默认只做 `validate` 校验。
 
 默认启动 profile 是 `dev`。生产启动时必须设置：
 
@@ -40,6 +42,13 @@ $env:DB_PASSWORD="password"
 mvn spring-boot:run
 ```
 
+如果只想改端口，也可以设置：
+
+```powershell
+$env:DB_PORT="3306"
+mvn spring-boot:run
+```
+
 ## 生产必填环境变量
 
 生产 profile 不再给数据库和 CORS 提供本地默认值，避免误用开发配置。
@@ -56,6 +65,8 @@ CORS_ALLOWED_ORIGINS=https://your-domain.com
 
 ```text
 JPA_DDL_AUTO=validate
+FLYWAY_ENABLED=true
+FLYWAY_BASELINE_ON_MIGRATE=false
 SESSION_COOKIE_SECURE=true
 LOG_FILE=logs/resume-generator-prod.log
 LOG_FILE_MAX_SIZE=10MB
@@ -65,6 +76,7 @@ ACCESS_LOG_ENABLED=true
 PUBLIC_RESUME_CACHE_BACKEND=redis
 REDIS_HOST=your-redis-host
 REDIS_PORT=6379
+REDIS_HEALTH_ENABLED=true
 ```
 
 如果应用直接处理 HTTPS，或已经正确配置反向代理转发头，可以再启用：
