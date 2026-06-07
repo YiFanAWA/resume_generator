@@ -7,7 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import com.daemonsets.resumeportal.models.UserProfile;
 
-import javax.persistence.LockModeType;
+import jakarta.persistence.LockModeType;
 import java.util.Optional;
 
 public interface UserProfileRepository extends JpaRepository<UserProfile, Integer> {

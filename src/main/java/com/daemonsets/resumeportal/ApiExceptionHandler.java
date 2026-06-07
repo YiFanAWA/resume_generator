@@ -2,6 +2,7 @@ package com.daemonsets.resumeportal;
 
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -14,8 +15,8 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<?> handleResponseStatus(ResponseStatusException exception) {
-        HttpStatus status = exception.getStatus();
-        String message = exception.getReason() == null ? status.getReasonPhrase() : exception.getReason();
+        HttpStatusCode status = exception.getStatusCode();
+        String message = exception.getReason() == null ? "Request failed" : exception.getReason();
         return ResponseEntity.status(status).body(Map.of("error", message));
     }
 

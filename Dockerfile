@@ -8,7 +8,7 @@ COPY frontend frontend
 COPY src/main/resources src/main/resources
 RUN cd frontend && npm run build
 
-FROM maven:3.9-eclipse-temurin-11 AS backend-build
+FROM maven:3.9-eclipse-temurin-17 AS backend-build
 
 WORKDIR /workspace
 COPY pom.xml mvnw ./
@@ -17,7 +17,7 @@ COPY src src
 COPY --from=frontend-build /workspace/src/main/resources/static/app src/main/resources/static/app
 RUN chmod +x mvnw && ./mvnw -B -DskipTests package
 
-FROM eclipse-temurin:11-jre
+FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 ENV SPRING_PROFILES_ACTIVE=prod

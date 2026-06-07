@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +40,7 @@ public class UserProfile {
     private String designation;
 
     @Column(name = "is_public")
+    @Builder.Default
     private boolean isPublic = false;
 
     @Column(name = "share_token", unique = true, length = 64)
@@ -55,6 +56,7 @@ public class UserProfile {
     private Integer shareMaxViews;
 
     @Column(name = "share_view_count")
+    @Builder.Default
     private long shareViewCount = 0;
 
     @Column(name = "share_last_viewed_at")

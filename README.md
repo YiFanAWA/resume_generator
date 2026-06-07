@@ -5,7 +5,7 @@ Resume Generator is a Spring Boot + React resume builder. The current version ha
 ## Current Architecture
 
 - Frontend: React 18 + Vite, located in `frontend/`.
-- Backend: Spring Boot 2.3.1, Java 11, Spring MVC REST APIs.
+- Backend: Spring Boot 3.3.x, Java 17, Spring MVC REST APIs.
 - Authentication: Spring Security session + cookie.
 - Persistence: Spring Data JPA + MySQL 8.
 - Database migrations: Flyway versioned SQL migrations.
