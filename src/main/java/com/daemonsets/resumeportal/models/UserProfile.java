@@ -27,6 +27,7 @@ public class UserProfile {
 
     private int theme;
 
+    @Column(columnDefinition = "TEXT")
     private String summary;
 
     private String firstName;
@@ -73,6 +74,7 @@ public class UserProfile {
     List<Education> educations = new ArrayList<>();
 
     @ElementCollection(targetClass=String.class)
+    @Column(name = "skills", columnDefinition = "TEXT")
     @Builder.Default
     List<String> skills = new ArrayList<>();
 

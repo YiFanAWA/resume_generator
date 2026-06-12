@@ -2,6 +2,8 @@ HELP.md
 target/
 .tools/
 logs/
+.DS_Store
+**/.DS_Store
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**
 !**/src/test/**

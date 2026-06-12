@@ -69,7 +69,7 @@ function login() {
     `${BASE_URL}/api/auth/login`,
     JSON.stringify({ username: USERNAME, password: PASSWORD }),
     {
-      headers: jsonHeaders(),
+      headers: jsonHeadersWithCsrf(),
       tags: { endpoint: "login" }
     }
   );
@@ -127,7 +127,7 @@ function saveProfile() {
     `${BASE_URL}/api/profile`,
     JSON.stringify(profilePayload()),
     {
-      headers: jsonHeaders(),
+      headers: jsonHeadersWithCsrf(),
       tags: { endpoint: "save_profile" }
     }
   );
@@ -140,6 +140,33 @@ function saveProfile() {
 
 function jsonHeaders() {
   return { "Content-Type": "application/json" };
+}
+
+function jsonHeadersWithCsrf() {
+  return { ...jsonHeaders(), ...csrfHeader() };
+}
+
+function csrfHeader() {
+  const response = http.get(`${BASE_URL}/api/csrf`, {
+    tags: { endpoint: "csrf" }
+  });
+
+  const ok = check(response, {
+    "csrf status is 200": (res) => res.status === 200
+  });
+  if (!ok) {
+    return {};
+  }
+
+  try {
+    const csrf = response.json();
+    if (!csrf || !csrf.token) {
+      return {};
+    }
+    return { [csrf.headerName || "X-XSRF-TOKEN"]: csrf.token };
+  } catch (error) {
+    return {};
+  }
 }
 
 function profilePayload() {

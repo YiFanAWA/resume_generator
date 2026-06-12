@@ -1,6 +1,7 @@
 package com.daemonsets.resumeportal;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
@@ -15,16 +16,23 @@ class PublicResumeCacheServiceTests {
 
     @Test
     void localCacheStoresAndEvictsPublicResumeDto() {
+        SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
         PublicResumeCacheService cacheService = new PublicResumeCacheService(
                 defaultProperties(),
                 mock(StringRedisTemplate.class),
-                new ObjectMapper()
+                new ObjectMapper(),
+                meterRegistry
         );
         Map<String, Object> publicResume = publicResume();
 
         cacheService.put("token-1", publicResume);
 
         assertThat(cacheService.get("token-1")).contains(publicResume);
+        assertThat(meterRegistry.counter(
+                "resume.public.cache.lookup",
+                "backend", "local",
+                "outcome", "hit"
+        ).count()).isEqualTo(1);
 
         cacheService.evict("token-1");
 
@@ -35,15 +43,22 @@ class PublicResumeCacheServiceTests {
     void disabledCacheDoesNotStorePublicResume() {
         PublicResumeCacheProperties properties = defaultProperties();
         properties.setEnabled(false);
+        SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
         PublicResumeCacheService cacheService = new PublicResumeCacheService(
                 properties,
                 mock(StringRedisTemplate.class),
-                new ObjectMapper()
+                new ObjectMapper(),
+                meterRegistry
         );
 
         cacheService.put("token-1", publicResume());
 
         assertThat(cacheService.get("token-1")).isEmpty();
+        assertThat(meterRegistry.counter(
+                "resume.public.cache.lookup",
+                "backend", "none",
+                "outcome", "bypassed"
+        ).count()).isEqualTo(1);
     }
 
     private PublicResumeCacheProperties defaultProperties() {

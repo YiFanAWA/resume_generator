@@ -23,7 +23,7 @@ public class HomeController {
     private UserProfileRepository userProfileRepository;
 
     @Autowired
-    private PdfExportService pdfExportService;
+    private ProfileService profileService;
 
     @GetMapping("/")
     public String home() {
@@ -79,19 +79,17 @@ public class HomeController {
     public ResponseEntity<byte[]> exportPdf(Principal principal, @PathVariable String userId) {
         assertOwner(principal, userId);
 
-        UserProfile userProfile = userProfileRepository.findByUserName(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found"));
-
         try {
-            byte[] pdfBytes = pdfExportService.generatePdf(userProfile);
+            PdfExportResult result = profileService.exportPdf(userId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found"));
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
-            headers.setContentDispositionFormData("attachment", userId + "_resume.pdf");
+            headers.setContentDispositionFormData("attachment", result.filename());
 
             return ResponseEntity.ok()
                     .headers(headers)
-                    .body(pdfBytes);
+                    .body(result.content());
         } catch (IOException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to generate PDF", e);
         }

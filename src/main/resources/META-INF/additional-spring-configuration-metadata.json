@@ -1,0 +1,94 @@
+{
+  "properties": [
+    {
+      "name": "app.logging.file.max-size",
+      "type": "java.lang.String",
+      "description": "Maximum size of a single application log file before rolling."
+    },
+    {
+      "name": "app.logging.file.max-history",
+      "type": "java.lang.Integer",
+      "description": "Maximum number of rolled application log files to keep."
+    },
+    {
+      "name": "app.logging.file.total-size-cap",
+      "type": "java.lang.String",
+      "description": "Total size cap for all retained application log files."
+    },
+    {
+      "name": "app.public-resume-cache.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether public resume cache is enabled."
+    },
+    {
+      "name": "app.public-resume-cache.backend",
+      "type": "com.daemonsets.resumeportal.PublicResumeCacheProperties$Backend",
+      "description": "Public resume cache backend. Supported values are local and redis."
+    },
+    {
+      "name": "app.public-resume-cache.ttl",
+      "type": "java.time.Duration",
+      "description": "Time to live for cached public resume payloads."
+    },
+    {
+      "name": "app.public-resume-cache.maximum-size",
+      "type": "java.lang.Long",
+      "description": "Maximum number of public resume payloads retained in local cache."
+    },
+    {
+      "name": "app.security.require-https",
+      "type": "java.lang.Boolean",
+      "description": "Whether Spring Security should require HTTPS for all requests."
+    },
+    {
+      "name": "app.security.allow-legacy-plain-passwords",
+      "type": "java.lang.Boolean",
+      "description": "Whether non-BCrypt legacy plaintext passwords should be accepted during login migration."
+    },
+    {
+      "name": "app.security.actuator-admin-role",
+      "type": "java.lang.String",
+      "description": "Role name, without ROLE_ prefix, required to access non-public actuator endpoints."
+    },
+    {
+      "name": "app.pdf-export.max-output-size",
+      "type": "org.springframework.util.unit.DataSize",
+      "description": "Maximum generated PDF response size."
+    },
+    {
+      "name": "app.pdf-export.max-profile-characters",
+      "type": "java.lang.Long",
+      "description": "Maximum profile text characters allowed before PDF export."
+    },
+    {
+      "name": "app.rate-limit.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether the built-in in-memory API rate limiter is enabled."
+    },
+    {
+      "name": "app.rate-limit.window",
+      "type": "java.time.Duration",
+      "description": "Fixed time window for API rate limiting."
+    },
+    {
+      "name": "app.rate-limit.login-capacity",
+      "type": "java.lang.Integer",
+      "description": "Allowed login/register requests per client IP and window."
+    },
+    {
+      "name": "app.rate-limit.public-capacity",
+      "type": "java.lang.Integer",
+      "description": "Allowed public resume requests per client IP and window."
+    },
+    {
+      "name": "app.rate-limit.pdf-capacity",
+      "type": "java.lang.Integer",
+      "description": "Allowed PDF export requests per client IP and window."
+    },
+    {
+      "name": "app.rate-limit.api-capacity",
+      "type": "java.lang.Integer",
+      "description": "Allowed authenticated API requests per client IP and window."
+    }
+  ]
+}

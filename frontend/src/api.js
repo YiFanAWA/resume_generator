@@ -7,13 +7,17 @@ export class ApiError extends Error {
   }
 }
 
+const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
 async function request(path, options = {}) {
   const { body, responseType = "json", ...fetchOptions } = options;
+  const csrfHeaders = await csrfHeadersFor(fetchOptions.method);
   const response = await fetch(path, {
     credentials: "include",
     ...fetchOptions,
     headers: {
       ...(body ? { "Content-Type": "application/json" } : {}),
+      ...csrfHeaders,
       ...(fetchOptions.headers || {})
     },
     body: body ? JSON.stringify(body) : undefined
@@ -48,6 +52,22 @@ async function readErrorData(response) {
       message: response.statusText || "Request failed"
     };
   }
+}
+
+async function csrfHeadersFor(method = "GET") {
+  if (!UNSAFE_METHODS.has(method.toUpperCase())) {
+    return {};
+  }
+
+  const response = await fetch("/api/csrf", {
+    credentials: "include"
+  });
+  if (!response.ok) {
+    throw new ApiError("Failed to obtain CSRF token", response.status, null);
+  }
+
+  const csrf = await response.json();
+  return { [csrf.headerName || "X-XSRF-TOKEN"]: csrf.token };
 }
 
 export function login(credentials) {

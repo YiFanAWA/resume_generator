@@ -1,6 +1,8 @@
+-- Demo seed data is disabled by default because spring.sql.init.mode defaults to never.
+-- Passwords are BCrypt hashes, not plaintext. Demo credentials remain einstein/einstein and newton/newton.
 insert into `user` (id, user_name, password, active, roles) values
-                                                                (1, 'einstein', 'einstein', true, 'USER'),
-                                                                (2, 'newton', 'newton', true, 'USER');
+                                                                (1, 'einstein', '$2a$10$psrmgr6R8U2TmQaC44luye66DVSMlHddb4KIWPr2EqrKB/joOlHEi', true, 'USER'),
+                                                                (2, 'newton', '$2a$10$EWTbfLA8XkcobjboAx.cTuwtrH57StXOvCLgOzFXRhVAvy0mYoQZa', true, 'USER');
 
 insert into user_profile (id, user_name, theme, summary, first_name, last_name, email, phone, designation) values
                                                                                                                (1, 'einstein', 1, 'Developed the theory of relativity, one of the two pillars of modern physics. My work is also known for its influence on the philosophy of science.', 'Albert', 'Einstein', 'einstein@gmail.com', '111-111-1111', 'Theoretical physicist'),

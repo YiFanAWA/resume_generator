@@ -5,6 +5,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.RedisSystemException;
@@ -27,17 +29,20 @@ public class PublicResumeCacheService {
     private final PublicResumeCacheProperties properties;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
     private final Cache<String, Map<String, Object>> localCache;
     private final AtomicBoolean cacheFailureLogged = new AtomicBoolean(false);
 
     public PublicResumeCacheService(
             PublicResumeCacheProperties properties,
             StringRedisTemplate redisTemplate,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            MeterRegistry meterRegistry
     ) {
         this.properties = properties;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
+        this.meterRegistry = meterRegistry;
         this.localCache = Caffeine.newBuilder()
                 .maximumSize(properties.getMaximumSize())
                 .expireAfterWrite(properties.getTtl())
@@ -46,6 +51,7 @@ public class PublicResumeCacheService {
 
     public Optional<Map<String, Object>> get(String shareToken) {
         if (!isUsableToken(shareToken) || !properties.isEnabled()) {
+            recordLookup("none", "bypassed");
             return Optional.empty();
         }
 
@@ -53,11 +59,15 @@ public class PublicResumeCacheService {
             Optional<Map<String, Object>> redisValue = getFromRedis(shareToken);
             if (redisValue.isPresent()) {
                 localCache.put(shareToken, redisValue.get());
+                recordLookup("redis", "hit");
                 return redisValue;
             }
+            recordLookup("redis", "miss");
         }
 
-        return Optional.ofNullable(localCache.getIfPresent(shareToken));
+        Optional<Map<String, Object>> localValue = Optional.ofNullable(localCache.getIfPresent(shareToken));
+        recordLookup("local", localValue.isPresent() ? "hit" : "miss");
+        return localValue;
     }
 
     public void put(String shareToken, Map<String, Object> publicResume) {
@@ -130,6 +140,8 @@ public class PublicResumeCacheService {
     }
 
     private void logCacheFailure(String operation, Exception exception) {
+        recordCacheFailure(operation);
+
         if (exception instanceof RedisConnectionFailureException || exception instanceof RedisSystemException) {
             if (cacheFailureLogged.compareAndSet(false, true)) {
                 log.warn("Public resume Redis cache {} failed. Falling back to local cache/database. Cause: {}",
@@ -141,5 +153,23 @@ public class PublicResumeCacheService {
         }
 
         log.warn("Public resume cache {} failed. Falling back to database.", operation, exception);
+    }
+
+    private void recordLookup(String backend, String outcome) {
+        Counter.builder("resume.public.cache.lookup")
+                .description("Public resume cache lookup attempts")
+                .tag("backend", backend)
+                .tag("outcome", outcome)
+                .register(meterRegistry)
+                .increment();
+    }
+
+    private void recordCacheFailure(String operation) {
+        Counter.builder("resume.public.cache.failure")
+                .description("Public resume cache operation failures")
+                .tag("backend", "redis")
+                .tag("operation", operation)
+                .register(meterRegistry)
+                .increment();
     }
 }

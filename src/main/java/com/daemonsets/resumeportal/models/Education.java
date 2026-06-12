@@ -31,6 +31,7 @@ public class Education {
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
 
+    @Column(columnDefinition = "TEXT")
     private String summary;
 
     public String getFormattedStartDate() {

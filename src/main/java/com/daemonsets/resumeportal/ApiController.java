@@ -1,23 +1,13 @@
 package com.daemonsets.resumeportal;
 
-import com.daemonsets.resumeportal.models.Education;
-import com.daemonsets.resumeportal.models.Job;
-import com.daemonsets.resumeportal.models.User;
 import com.daemonsets.resumeportal.models.UserProfile;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,66 +15,42 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.security.Principal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
 @RequestMapping("/api")
 public class ApiController {
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final AuthService authService;
+    private final ProfileService profileService;
+    private final ShareService shareService;
 
-    @Autowired
-    private UserProfileRepository userProfileRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private AuthenticationManager authenticationManager;
-
-    @Autowired
-    private PdfExportService pdfExportService;
-
-    @Autowired
-    private PublicResumeCacheService publicResumeCacheService;
+    public ApiController(AuthService authService, ProfileService profileService, ShareService shareService) {
+        this.authService = authService;
+        this.profileService = profileService;
+        this.shareService = shareService;
+    }
 
     @PostMapping("/auth/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> credentials, HttpServletRequest request) {
-        String username = credentials.getOrDefault("username", "").trim();
-        String password = credentials.getOrDefault("password", "");
-
         try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(username, password)
-            );
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            request.getSession(true).setAttribute(
-                    HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                    SecurityContextHolder.getContext()
-            );
-            upgradeLegacyPasswordIfNeeded(username, password);
-
-            return ResponseEntity.ok(Map.of(
-                    "message", "Login successful",
-                    "username", username
-            ));
-        } catch (Exception e) {
-            log.warn("Login failed for user: {}. Reason: {}", username, e.getMessage());
+            return ResponseEntity.ok(authService.login(credentials, request));
+        } catch (AuthenticationException exception) {
             return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
         }
+    }
+
+    @GetMapping("/csrf")
+    public ResponseEntity<?> csrf(CsrfToken csrfToken) {
+        return ResponseEntity.ok(Map.of(
+                "token", csrfToken.getToken(),
+                "headerName", csrfToken.getHeaderName(),
+                "parameterName", csrfToken.getParameterName()
+        ));
     }
 
     @GetMapping("/auth/me")
@@ -101,102 +67,34 @@ public class ApiController {
 
     @PostMapping("/auth/register")
     public ResponseEntity<?> register(@RequestBody Map<String, String> userData) {
-        String userName = userData.getOrDefault("username", "").trim();
-        String password = userData.get("password");
-        String confirmPassword = userData.get("confirmPassword");
-
-        if (userName.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Username cannot be empty"));
+        try {
+            authService.register(userData);
+            return ResponseEntity.ok(Map.of("message", "Registration successful"));
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(Map.of("error", exception.getMessage()));
         }
-        if (password == null || password.length() < 8) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Password must be at least 8 characters long"));
-        }
-        if (!password.equals(confirmPassword)) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Passwords do not match"));
-        }
-        if (userRepository.findByUserName(userName).isPresent()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Username already exists"));
-        }
-
-        User newUser = new User();
-        newUser.setUserName(userName);
-        newUser.setPassword(passwordEncoder.encode(password));
-        newUser.setActive(true);
-        newUser.setRoles("USER");
-        userRepository.save(newUser);
-
-        UserProfile userProfile = new UserProfile();
-        userProfile.setUserName(userName);
-        userProfile.setTheme(1);
-        userProfile.setJobs(new ArrayList<>());
-        userProfile.setEducations(new ArrayList<>());
-        userProfile.setSkills(new ArrayList<>());
-        userProfileRepository.save(userProfile);
-
-        return ResponseEntity.ok(Map.of("message", "Registration successful"));
-    }
-
-    @PostMapping("/auth/logout")
-    public ResponseEntity<?> logout(HttpServletRequest request) {
-        request.getSession().invalidate();
-        SecurityContextHolder.clearContext();
-        return ResponseEntity.ok(Map.of("message", "Logout successful"));
     }
 
     @GetMapping("/profile")
-    @Transactional(readOnly = true)
     public ResponseEntity<?> getProfile(Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Not logged in"));
         }
 
-        return userProfileRepository.findByUserName(principal.getName())
-                .map(profile -> ResponseEntity.ok(toPrivateProfile(profile)))
+        return profileService.getPrivateProfile(principal.getName())
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PutMapping("/profile")
-    @Transactional
     public ResponseEntity<?> updateProfile(@RequestBody UserProfile userProfile, Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Not authenticated"));
         }
 
-        Optional<UserProfile> existingProfileOpt = userProfileRepository.findByUserNameForUpdate(principal.getName());
-        if (existingProfileOpt.isEmpty()) {
+        if (!profileService.updateProfile(principal.getName(), userProfile)) {
             return ResponseEntity.notFound().build();
         }
-
-        UserProfile existingProfile = existingProfileOpt.get();
-        String shareToken = existingProfile.getShareToken();
-        existingProfile.setFirstName(trimToNull(userProfile.getFirstName()));
-        existingProfile.setLastName(trimToNull(userProfile.getLastName()));
-        existingProfile.setEmail(trimToNull(userProfile.getEmail()));
-        existingProfile.setPhone(trimToNull(userProfile.getPhone()));
-        existingProfile.setDesignation(trimToNull(userProfile.getDesignation()));
-        existingProfile.setSummary(trimToNull(userProfile.getSummary()));
-        existingProfile.setTheme(normalizeTheme(userProfile.getTheme()));
-
-        existingProfile.getJobs().clear();
-        if (userProfile.getJobs() != null) {
-            existingProfile.getJobs().addAll(userProfile.getJobs());
-        }
-
-        existingProfile.getEducations().clear();
-        if (userProfile.getEducations() != null) {
-            existingProfile.getEducations().addAll(userProfile.getEducations());
-        }
-
-        existingProfile.getSkills().clear();
-        if (userProfile.getSkills() != null) {
-            existingProfile.getSkills().addAll(userProfile.getSkills().stream()
-                    .map(this::trimToNull)
-                    .filter(skill -> skill != null)
-                    .collect(Collectors.toList()));
-        }
-
-        userProfileRepository.save(existingProfile);
-        evictPublicCacheAfterCommit(shareToken);
         return ResponseEntity.ok(Map.of("message", "Profile updated successfully"));
     }
 
@@ -206,354 +104,88 @@ public class ApiController {
             return ResponseEntity.status(401).body("Not authenticated".getBytes());
         }
 
-        Optional<UserProfile> userProfileOptional = userProfileRepository.findByUserName(principal.getName());
-        if (userProfileOptional.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
         try {
-            UserProfile userProfile = userProfileOptional.get();
-            byte[] pdfBytes = pdfExportService.generatePdf(userProfile);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_PDF);
-            headers.setContentDispositionFormData("attachment", safePdfName(userProfile));
-
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .body(pdfBytes);
-        } catch (Exception e) {
-            log.error("Failed to generate PDF for user {}", principal.getName(), e);
+            return profileService.exportPdf(principal.getName())
+                    .map(result -> ResponseEntity.ok()
+                            .headers(pdfHeaders(result.filename()))
+                            .body(result.content()))
+                    .orElseGet(() -> ResponseEntity.notFound().build());
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            log.error("Failed to generate PDF for user {}", principal.getName(), exception);
             return ResponseEntity.status(500).body("Failed to generate PDF".getBytes());
         }
     }
 
     @GetMapping("/profile/share")
-    @Transactional(readOnly = true)
     public ResponseEntity<?> getShareStatus(Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Not authenticated"));
         }
 
-        return userProfileRepository.findByUserName(principal.getName())
-                .map(profile -> ResponseEntity.ok(toShareStatus(profile)))
+        return shareService.getShareStatus(principal.getName())
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping("/profile/share/generate")
-    @Transactional
     public ResponseEntity<?> generateShareToken(@RequestBody(required = false) Map<String, Object> shareSettings, Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Not authenticated"));
         }
 
-        Optional<UserProfile> profileOpt = userProfileRepository.findByUserNameForUpdate(principal.getName());
-        if (profileOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        UserProfile profile = profileOpt.get();
-        String previousShareToken = profile.getShareToken();
-        profile.generateShareToken();
-        profile.setPublic(true);
-        applyShareSettings(profile, shareSettings);
-        userProfileRepository.save(profile);
-        evictPublicCacheAfterCommit(previousShareToken);
-        evictPublicCacheAfterCommit(profile.getShareToken());
-
-        return ResponseEntity.ok(toShareStatus(profile));
+        return shareService.generateShareToken(principal.getName(), shareSettings)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PutMapping("/profile/share/settings")
-    @Transactional
     public ResponseEntity<?> updateShareSettings(@RequestBody(required = false) Map<String, Object> shareSettings, Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Not authenticated"));
         }
 
-        Optional<UserProfile> profileOpt = userProfileRepository.findByUserNameForUpdate(principal.getName());
-        if (profileOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
+        try {
+            return shareService.updateShareSettings(principal.getName(), shareSettings)
+                    .map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.notFound().build());
+        } catch (IllegalStateException exception) {
+            return ResponseEntity.badRequest().body(Map.of("error", exception.getMessage()));
         }
-
-        UserProfile profile = profileOpt.get();
-        if (profile.getShareToken() == null || !profile.isPublic()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Generate a share link before updating share settings"));
-        }
-
-        applyShareSettings(profile, shareSettings);
-        userProfileRepository.save(profile);
-        evictPublicCacheAfterCommit(profile.getShareToken());
-
-        return ResponseEntity.ok(toShareStatus(profile));
     }
 
     @PostMapping("/profile/share/revoke")
-    @Transactional
     public ResponseEntity<?> revokeShareToken(Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Not authenticated"));
         }
 
-        Optional<UserProfile> profileOpt = userProfileRepository.findByUserNameForUpdate(principal.getName());
-        if (profileOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        UserProfile profile = profileOpt.get();
-        String previousShareToken = profile.getShareToken();
-        profile.revokeShareToken();
-        userProfileRepository.save(profile);
-        evictPublicCacheAfterCommit(previousShareToken);
-
-        return ResponseEntity.ok(toShareStatus(profile));
+        return shareService.revokeShareToken(principal.getName())
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping("/public/{shareToken}")
-    @Transactional
     public ResponseEntity<?> publicView(@PathVariable String shareToken) {
-        return resolvePublicView(shareToken, null);
+        ShareService.PublicResumeResponse response = shareService.resolvePublicView(shareToken, null);
+        return ResponseEntity.status(response.status()).body(response.body());
     }
 
     @PostMapping("/public/{shareToken}/access")
-    @Transactional
     public ResponseEntity<?> publicViewWithPassword(
             @PathVariable String shareToken,
             @RequestBody(required = false) Map<String, String> accessData
     ) {
         String password = accessData == null ? null : accessData.get("password");
-        return resolvePublicView(shareToken, password);
+        ShareService.PublicResumeResponse response = shareService.resolvePublicView(shareToken, password);
+        return ResponseEntity.status(response.status()).body(response.body());
     }
 
-    private ResponseEntity<?> resolvePublicView(String shareToken, String password) {
-        Optional<UserProfile> profileOpt = userProfileRepository.findByShareTokenForUpdate(shareToken);
-        if (profileOpt.isEmpty() || !profileOpt.get().isPublic()) {
-            return ResponseEntity.status(404).body(Map.of("error", "Resume not found or private"));
-        }
-
-        UserProfile profile = profileOpt.get();
-        if (profile.isShareExpired()) {
-            return ResponseEntity.status(410).body(Map.of("error", "Share link has expired"));
-        }
-        if (profile.isShareViewLimitReached()) {
-            return ResponseEntity.status(410).body(Map.of("error", "Share link view limit has been reached"));
-        }
-        if (profile.hasSharePassword()) {
-            if (password == null || password.isBlank()) {
-                return ResponseEntity.status(401).body(Map.of(
-                        "error", "Share password required",
-                        "requiresPassword", true
-                ));
-            }
-            if (!passwordEncoder.matches(password, profile.getSharePasswordHash())) {
-                return ResponseEntity.status(401).body(Map.of(
-                        "error", "Incorrect share password",
-                        "requiresPassword", true
-                ));
-            }
-        }
-
-        profile.recordShareView();
-        userProfileRepository.save(profile);
-
-        Optional<Map<String, Object>> cachedProfile = publicResumeCacheService.get(shareToken);
-        if (cachedProfile.isPresent()) {
-            return ResponseEntity.ok(cachedProfile.get());
-        }
-
-        Map<String, Object> response = toPublicProfile(profile);
-        publicResumeCacheService.put(shareToken, response);
-        return ResponseEntity.ok(response);
-    }
-
-    private void upgradeLegacyPasswordIfNeeded(String username, String rawPassword) {
-        userRepository.findByUserName(username)
-                .filter(user -> !isBcryptHash(user.getPassword()))
-                .ifPresent(user -> {
-                    user.setPassword(passwordEncoder.encode(rawPassword));
-                    userRepository.save(user);
-                });
-    }
-
-    private Map<String, Object> toPrivateProfile(UserProfile profile) {
-        Map<String, Object> response = toPublicProfile(profile);
-        response.put("userName", profile.getUserName());
-        response.put("email", profile.getEmail());
-        response.put("phone", profile.getPhone());
-        response.putAll(toShareStatus(profile));
-        return response;
-    }
-
-    private Map<String, Object> toPublicProfile(UserProfile profile) {
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("firstName", profile.getFirstName());
-        response.put("lastName", profile.getLastName());
-        response.put("designation", profile.getDesignation());
-        response.put("summary", profile.getSummary());
-        response.put("jobs", safeList(profile.getJobs()).stream().map(this::toJobResponse).collect(Collectors.toList()));
-        response.put("educations", safeList(profile.getEducations()).stream().map(this::toEducationResponse).collect(Collectors.toList()));
-        response.put("skills", safeList(profile.getSkills()));
-        response.put("theme", profile.getTheme());
-        return response;
-    }
-
-    private Map<String, Object> toShareStatus(UserProfile profile) {
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("message", profile.isPublic() ? "Share link active" : "Share link disabled");
-        response.put("shareToken", profile.getShareToken());
-        response.put("shareUrl", profile.getShareToken() == null ? null : "/app/public-share?token=" + profile.getShareToken());
-        response.put("isPublic", profile.isPublic());
-        response.put("shareExpiresAt", formatDateTime(profile.getShareExpiresAt()));
-        response.put("shareMaxViews", profile.getShareMaxViews());
-        response.put("shareViewCount", profile.getShareViewCount());
-        response.put("shareLastViewedAt", formatDateTime(profile.getShareLastViewedAt()));
-        response.put("sharePasswordProtected", profile.hasSharePassword());
-        response.put("shareExpired", profile.isShareExpired());
-        response.put("shareLimitReached", profile.isShareViewLimitReached());
-        return response;
-    }
-
-    private Map<String, Object> toJobResponse(Job job) {
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("company", job.getCompany());
-        response.put("designation", job.getDesignation());
-        response.put("startDate", formatIsoDate(job.getStartDate()));
-        response.put("endDate", formatIsoDate(job.getEndDate()));
-        response.put("currentJob", job.isCurrentJob());
-        response.put("formattedStartDate", job.getFormattedStartDate());
-        response.put("formattedEndDate", job.getFormattedEndDate());
-        response.put("responsibilities", job.getResponsibilities());
-        return response;
-    }
-
-    private Map<String, Object> toEducationResponse(Education education) {
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("college", education.getCollege());
-        response.put("qualification", education.getQualification());
-        response.put("startDate", formatIsoDate(education.getStartDate()));
-        response.put("endDate", formatIsoDate(education.getEndDate()));
-        response.put("formattedStartDate", education.getFormattedStartDate());
-        response.put("formattedEndDate", education.getFormattedEndDate());
-        response.put("summary", education.getSummary());
-        return response;
-    }
-
-    private void evictPublicCacheAfterCommit(String shareToken) {
-        if (shareToken == null || shareToken.isBlank()) {
-            return;
-        }
-
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            publicResumeCacheService.evict(shareToken);
-            return;
-        }
-
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                publicResumeCacheService.evict(shareToken);
-            }
-        });
-    }
-
-    private void applyShareSettings(UserProfile profile, Map<String, Object> shareSettings) {
-        if (shareSettings == null) {
-            return;
-        }
-
-        if (shareSettings.containsKey("expiresAt")) {
-            profile.setShareExpiresAt(parseExpiresAt(shareSettings.get("expiresAt")));
-        }
-        if (shareSettings.containsKey("maxViews")) {
-            profile.setShareMaxViews(parseMaxViews(shareSettings.get("maxViews")));
-        }
-        if (Boolean.TRUE.equals(asBoolean(shareSettings.get("clearPassword")))) {
-            profile.setSharePasswordHash(null);
-        } else if (shareSettings.containsKey("password")) {
-            Object passwordValue = shareSettings.get("password");
-            String password = passwordValue == null ? null : trimToNull(String.valueOf(passwordValue));
-            if (password != null) {
-                profile.setSharePasswordHash(passwordEncoder.encode(password));
-            }
-        }
-    }
-
-    private LocalDateTime parseExpiresAt(Object value) {
-        String rawValue = value == null ? null : trimToNull(String.valueOf(value));
-        if (rawValue == null) {
-            return null;
-        }
-        try {
-            return LocalDateTime.parse(rawValue);
-        } catch (DateTimeParseException exception) {
-            throw new IllegalArgumentException("share expiration must use ISO local datetime format, for example 2026-06-05T18:30", exception);
-        }
-    }
-
-    private Integer parseMaxViews(Object value) {
-        if (value == null) {
-            return null;
-        }
-        String rawValue = trimToNull(String.valueOf(value));
-        if (rawValue == null) {
-            return null;
-        }
-        try {
-            int maxViews = Integer.parseInt(rawValue);
-            return maxViews > 0 ? maxViews : null;
-        } catch (NumberFormatException exception) {
-            throw new IllegalArgumentException("share max views must be a positive number", exception);
-        }
-    }
-
-    private Boolean asBoolean(Object value) {
-        if (value instanceof Boolean) {
-            return (Boolean) value;
-        }
-        return value == null ? Boolean.FALSE : Boolean.parseBoolean(String.valueOf(value));
-    }
-
-    private String formatIsoDate(LocalDate value) {
-        return value == null ? null : value.toString();
-    }
-
-    private String formatDateTime(LocalDateTime value) {
-        return value == null ? null : value.toString();
-    }
-
-    private String trimToNull(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private <T> List<T> safeList(List<T> values) {
-        return values == null ? List.of() : values;
-    }
-
-    private int normalizeTheme(int theme) {
-        if (theme < 1 || theme > 3) {
-            return 1;
-        }
-        return theme;
-    }
-
-    private String safePdfName(UserProfile profile) {
-        String first = Optional.ofNullable(profile.getFirstName()).orElse("");
-        String last = Optional.ofNullable(profile.getLastName()).orElse("");
-        String fullName = (first + "_" + last).replaceAll("[^a-zA-Z0-9_-]", "_");
-        if (fullName.replace("_", "").isEmpty()) {
-            fullName = profile.getUserName();
-        }
-        return fullName + "_Resume.pdf";
-    }
-
-    private boolean isBcryptHash(String password) {
-        return password != null
-                && (password.startsWith("$2a$")
-                || password.startsWith("$2b$")
-                || password.startsWith("$2y$"));
+    private HttpHeaders pdfHeaders(String filename) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", filename);
+        return headers;
     }
 }

@@ -32,6 +32,7 @@ public class Job {
     private boolean isCurrentJob;
 
     @ElementCollection(targetClass = String.class)
+    @Column(name = "responsibilities", columnDefinition = "TEXT")
     private List<String> responsibilities = new ArrayList<>();
 
     public String getFormattedStartDate() {

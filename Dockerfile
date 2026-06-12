@@ -24,7 +24,7 @@ ENV SPRING_PROFILES_ACTIVE=prod
 EXPOSE 5000
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core \
+    && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=backend-build /workspace/target/resume-portal-1.0.0.jar app.jar

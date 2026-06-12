@@ -35,9 +35,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -76,6 +78,7 @@ class ResumePortalApplicationTests {
     @Test
     void registerCreatesEncodedPasswordAndProfile() throws Exception {
         mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"alice\",\"password\":\"password123\",\"confirmPassword\":\"password123\"}"))
                 .andExpect(status().isOk())
@@ -95,10 +98,22 @@ class ResumePortalApplicationTests {
 
     @Test
     @WithMockUser(username = "alice")
+    void logoutReturnsJsonAndClearsSessionCookies() throws Exception {
+        mockMvc.perform(post("/api/auth/logout").with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.message").value("Logout successful"))
+                .andExpect(cookie().maxAge("JSESSIONID", 0))
+                .andExpect(cookie().maxAge("XSRF-TOKEN", 0));
+    }
+
+    @Test
+    @WithMockUser(username = "alice")
     void authenticatedUserCanUpdateOwnProfile() throws Exception {
         createUserAndProfile("alice");
 
         mockMvc.perform(put("/api/profile")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"firstName\":\"Alice\",\"lastName\":\"Wang\",\"theme\":2,\"skills\":[\"Java\",\"React\"]}"))
                 .andExpect(status().isOk())
@@ -116,7 +131,7 @@ class ResumePortalApplicationTests {
     void shareLinkCanBeGeneratedAndRevoked() throws Exception {
         createUserAndProfile("alice");
 
-        String generateResponse = mockMvc.perform(post("/api/profile/share/generate"))
+        String generateResponse = mockMvc.perform(post("/api/profile/share/generate").with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isPublic").value(true))
                 .andReturn()
@@ -134,7 +149,7 @@ class ResumePortalApplicationTests {
         verify(publicResumeCacheService).put(eq(shareToken), anyMap());
 
         clearInvocations(publicResumeCacheService);
-        mockMvc.perform(post("/api/profile/share/revoke"))
+        mockMvc.perform(post("/api/profile/share/revoke").with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isPublic").value(false));
         verify(publicResumeCacheService, atLeastOnce()).evict(shareToken);
@@ -174,7 +189,7 @@ class ResumePortalApplicationTests {
     @WithMockUser(username = "alice")
     void updatingPublicProfileEvictsCachedPublicResume() throws Exception {
         createUserAndProfile("alice");
-        String generateResponse = mockMvc.perform(post("/api/profile/share/generate"))
+        String generateResponse = mockMvc.perform(post("/api/profile/share/generate").with(csrf()))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -183,6 +198,7 @@ class ResumePortalApplicationTests {
 
         clearInvocations(publicResumeCacheService);
         mockMvc.perform(put("/api/profile")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"firstName\":\"Alice\",\"lastName\":\"Updated\",\"theme\":2,\"skills\":[\"Java\",\"Redis\"]}"))
                 .andExpect(status().isOk());
@@ -195,6 +211,7 @@ class ResumePortalApplicationTests {
     void passwordProtectedShareRequiresCorrectPassword() throws Exception {
         createUserAndProfile("alice");
         String generateResponse = mockMvc.perform(post("/api/profile/share/generate")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"password\":\"secret123\"}"))
                 .andExpect(status().isOk())
@@ -209,12 +226,14 @@ class ResumePortalApplicationTests {
                 .andExpect(jsonPath("$.requiresPassword").value(true));
 
         mockMvc.perform(post("/api/public/" + shareToken + "/access")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"password\":\"wrong\"}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.requiresPassword").value(true));
 
         mockMvc.perform(post("/api/public/" + shareToken + "/access")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"password\":\"secret123\"}"))
                 .andExpect(status().isOk())
@@ -231,6 +250,7 @@ class ResumePortalApplicationTests {
     void shareViewLimitIsEnforced() throws Exception {
         createUserAndProfile("alice");
         String generateResponse = mockMvc.perform(post("/api/profile/share/generate")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"maxViews\":1}"))
                 .andExpect(status().isOk())
@@ -254,6 +274,7 @@ class ResumePortalApplicationTests {
         createUserAndProfile("alice");
         String expiredAt = LocalDateTime.now().minusMinutes(1).withNano(0).toString();
         String generateResponse = mockMvc.perform(post("/api/profile/share/generate")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"expiresAt\":\"" + expiredAt + "\"}"))
                 .andExpect(status().isOk())
@@ -273,6 +294,7 @@ class ResumePortalApplicationTests {
     void shareSettingsCanBeUpdatedAndPasswordCleared() throws Exception {
         createUserAndProfile("alice");
         String generateResponse = mockMvc.perform(post("/api/profile/share/generate")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"password\":\"secret123\",\"maxViews\":5}"))
                 .andExpect(status().isOk())
@@ -282,6 +304,7 @@ class ResumePortalApplicationTests {
         String shareToken = objectMapper.readTree(generateResponse).get("shareToken").asText();
 
         mockMvc.perform(put("/api/profile/share/settings")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"clearPassword\":true,\"maxViews\":\"\"}"))
                 .andExpect(status().isOk())

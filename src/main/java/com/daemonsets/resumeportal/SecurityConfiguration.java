@@ -1,26 +1,30 @@
 package com.daemonsets.resumeportal;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Configuration
@@ -33,10 +37,27 @@ public class SecurityConfiguration {
     @Value("${app.security.require-https:false}")
     private boolean requireHttps;
 
+    @Value("${app.security.allow-legacy-plain-passwords:false}")
+    private boolean allowLegacyPlainPasswords;
+
+    @Value("${app.security.actuator-admin-role:ADMIN}")
+    private String actuatorAdminRole;
+
+    private final ObjectMapper objectMapper;
+
+    public SecurityConfiguration(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        CsrfTokenRequestAttributeHandler csrfTokenRequestHandler = new CsrfTokenRequestAttributeHandler();
+        csrfTokenRequestHandler.setCsrfRequestAttributeName("_csrf");
+
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRequestHandler(csrfTokenRequestHandler))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
@@ -52,21 +73,24 @@ public class SecurityConfiguration {
                         "/profile-templates/**",
                         "/favicon.ico"
                         ).permitAll()
+                        .requestMatchers("/api/csrf").permitAll()
+                        // First matching request matcher wins.
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers("/actuator/**").hasRole(actuatorAdminRole)
                         .requestMatchers("/api/auth/login", "/api/auth/register", "/api/public/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .authenticationEntryPoint((request, response, exception) -> {
                     if (isApiRequest(request.getRequestURI())) {
-                        writeJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, "Not authenticated");
+                        writeJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, "Not authenticated", request.getRequestURI());
                     } else {
                         response.sendRedirect("/app/");
                     }
                 })
                         .accessDeniedHandler((request, response, exception) -> {
                     if (isApiRequest(request.getRequestURI())) {
-                        writeJsonError(response, HttpServletResponse.SC_FORBIDDEN, "Access denied");
+                        writeJsonError(response, HttpServletResponse.SC_FORBIDDEN, "Access denied", request.getRequestURI());
                     } else {
                         response.sendError(HttpServletResponse.SC_FORBIDDEN);
                     }
@@ -78,18 +102,27 @@ public class SecurityConfiguration {
                 )
                 .logout(logout -> logout
                         .logoutUrl("/api/auth/logout")
-                        .logoutSuccessUrl("/app/")
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            response.setStatus(HttpServletResponse.SC_OK);
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            objectMapper.writeValue(response.getWriter(), Map.of("message", "Logout successful"));
+                        })
                         .invalidateHttpSession(true)
-                        .deleteCookies("JSESSIONID")
+                        .deleteCookies("JSESSIONID", "XSRF-TOKEN")
                         .permitAll()
                 )
-                .headers(headers -> headers
-                        .contentTypeOptions(Customizer.withDefaults())
-                        .frameOptions(frameOptions -> frameOptions.sameOrigin())
-                        .httpStrictTransportSecurity(hsts -> hsts
-                                .includeSubDomains(true)
-                                .maxAgeInSeconds(31536000)
-                        )
+                .headers(headers -> {
+                    headers.contentTypeOptions(Customizer.withDefaults());
+                    headers.frameOptions(frameOptions -> frameOptions.sameOrigin());
+                    headers.httpStrictTransportSecurity(hsts -> {
+                                if (requireHttps) {
+                                    hsts.includeSubDomains(true).maxAgeInSeconds(31536000);
+                                } else {
+                                    hsts.disable();
+                                }
+                            }
+                    );
+                }
                 );
 
         if (requireHttps) {
@@ -121,7 +154,7 @@ public class SecurityConfiguration {
                 if (isBcryptHash(encodedPassword)) {
                     return bcrypt.matches(rawPassword, encodedPassword);
                 }
-                return rawPassword.toString().equals(encodedPassword);
+                return allowLegacyPlainPasswords && rawPassword.toString().equals(encodedPassword);
             }
         };
     }
@@ -133,10 +166,14 @@ public class SecurityConfiguration {
                 .filter(origin -> !origin.isEmpty())
                 .collect(Collectors.toList());
 
+        if (origins.stream().anyMatch("*"::equals)) {
+            throw new IllegalStateException("Wildcard CORS origin is not allowed when credentials are enabled.");
+        }
+
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "X-XSRF-TOKEN"));
         configuration.setExposedHeaders(Arrays.asList("Content-Disposition"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
@@ -157,9 +194,9 @@ public class SecurityConfiguration {
         return requestUri != null && requestUri.startsWith("/api/");
     }
 
-    private void writeJsonError(HttpServletResponse response, int status, String message) throws IOException {
+    private void writeJsonError(HttpServletResponse response, int status, String message, String path) throws IOException {
         response.setStatus(status);
-        response.setContentType("application/json;charset=UTF-8");
-        response.getWriter().write("{\"error\":\"" + message + "\"}");
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        objectMapper.writeValue(response.getWriter(), ApiErrorResponse.of(message, status, path));
     }
 }
