@@ -1,7 +1,10 @@
 package com.daemonsets.resumeportal;
 
-import com.daemonsets.resumeportal.models.User;
-import com.daemonsets.resumeportal.models.UserProfile;
+import com.daemonsets.resumeportal.cache.PublicResumeCacheService;
+import com.daemonsets.resumeportal.model.User;
+import com.daemonsets.resumeportal.model.UserProfile;
+import com.daemonsets.resumeportal.repository.UserProfileRepository;
+import com.daemonsets.resumeportal.repository.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;

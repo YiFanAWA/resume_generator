@@ -1,4 +1,4 @@
-package com.daemonsets.resumeportal;
+package com.daemonsets.resumeportal.web;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.PessimisticLockingFailureException;

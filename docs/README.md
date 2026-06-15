@@ -6,6 +6,15 @@ Resume Generator 是一个前后端分离的在线简历生成系统。前端使
 
 这个项目不只是 CRUD 展示，而是围绕真实 Web 产品常见问题做了工程化迭代：前后端分离、认证安全、数据库迁移、PDF 跨平台导出、缓存、Docker、CI、压测基线和后续高并发演进规划。
 
+## 当前真源索引
+
+本项目当前采用 `docs/` 作为过渡真源目录；后续 agent 必须先读根目录 `AGENTS.md`，再读本索引。
+
+- [current-state-audit.md](current-state-audit.md)：当前代码、文档、Git 状态、产品边界和交接状态。
+- [architecture.md](architecture.md)：当前推荐架构、owner 分层、禁止路径和依赖方向。
+- [acceptance.md](acceptance.md)：验收门禁、证据日志、停止条件和漂移锁。
+- [BACKEND_PACKAGE_STRUCTURE.md](BACKEND_PACKAGE_STRUCTURE.md)：后端包结构和分层职责。
+
 ## 当前完成度
 
 可以理解为：工程化 MVP 已成型，适合作为简历项目展示；但还不能包装成完整生产级系统。
@@ -18,6 +27,7 @@ Resume Generator 是一个前后端分离的在线简历生成系统。前端使
 - 登录、注册、当前用户、退出登录已接入 Spring Security Session/Cookie。
 - CSRF 防护已启用，前端和 k6 脚本会先获取 `/api/csrf` 再提交写请求。
 - `ApiController` 已拆分为 Controller + Service + Mapper，Controller 只保留 HTTP 入参出参逻辑。
+- 后端 Java 包已按 `web/service/repository/model/config/cache/pdf/ratelimit` 分层，避免业务、Web 入口和基础设施能力混在根包。
 - 简历支持基础信息、工作经历、教育经历、技能、主题编辑。
 - PDF 导出已从手写 OpenPDF 排版迁移为 Thymeleaf HTML 模板 + OpenHTMLToPDF。
 - PDF 专用 CSS、classpath 静态资源读取和中文字体加载已处理，降低 JAR/Docker/Linux 部署乱码风险。
@@ -79,6 +89,8 @@ Public Share
 - `ProfileMapper`：负责实体对象到 API Map 的转换，避免 Controller 直接暴露 JPA 实体细节。
 - `PdfExportService`：负责模板渲染、PDF 专用样式注入、字体加载、HTML to PDF。
 - `PublicResumeCacheService`：负责本地缓存、Redis 缓存、缓存指标和失败降级。
+
+当前包结构说明见：[BACKEND_PACKAGE_STRUCTURE.md](BACKEND_PACKAGE_STRUCTURE.md)。
 
 ## 数据库设计
 

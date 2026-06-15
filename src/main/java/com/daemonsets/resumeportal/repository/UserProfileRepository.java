@@ -1,11 +1,11 @@
-package com.daemonsets.resumeportal;
+package com.daemonsets.resumeportal.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.daemonsets.resumeportal.models.UserProfile;
+import com.daemonsets.resumeportal.model.UserProfile;
 
 import jakarta.persistence.LockModeType;
 import java.util.Optional;

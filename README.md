@@ -66,3 +66,5 @@ k6 压测：
 ## 文档
 
 更完整的项目进度、架构说明、验收方式和后续规划见 [docs/README.md](docs/README.md)。
+
+后端包结构和分层职责见 [docs/BACKEND_PACKAGE_STRUCTURE.md](docs/BACKEND_PACKAGE_STRUCTURE.md)。

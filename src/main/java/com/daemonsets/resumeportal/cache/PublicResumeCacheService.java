@@ -1,4 +1,4 @@
-package com.daemonsets.resumeportal;
+package com.daemonsets.resumeportal.cache;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;

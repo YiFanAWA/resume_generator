@@ -1,5 +1,6 @@
-package com.daemonsets.resumeportal;
+package com.daemonsets.resumeportal.ratelimit;
 
+import com.daemonsets.resumeportal.web.ApiErrorResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

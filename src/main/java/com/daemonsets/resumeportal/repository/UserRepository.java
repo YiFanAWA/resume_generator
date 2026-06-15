@@ -1,8 +1,8 @@
-package com.daemonsets.resumeportal;
+package com.daemonsets.resumeportal.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.daemonsets.resumeportal.models.User;
+import com.daemonsets.resumeportal.model.User;
 
 import java.util.Optional;
 

@@ -1,6 +1,9 @@
-package com.daemonsets.resumeportal;
+package com.daemonsets.resumeportal.web;
 
-import com.daemonsets.resumeportal.models.UserProfile;
+import com.daemonsets.resumeportal.model.UserProfile;
+import com.daemonsets.resumeportal.pdf.PdfExportResult;
+import com.daemonsets.resumeportal.repository.UserProfileRepository;
+import com.daemonsets.resumeportal.service.ProfileService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;

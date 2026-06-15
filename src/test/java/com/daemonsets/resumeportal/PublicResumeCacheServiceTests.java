@@ -1,5 +1,7 @@
 package com.daemonsets.resumeportal;
 
+import com.daemonsets.resumeportal.cache.PublicResumeCacheProperties;
+import com.daemonsets.resumeportal.cache.PublicResumeCacheService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;

@@ -1,6 +1,8 @@
-package com.daemonsets.resumeportal;
+package com.daemonsets.resumeportal.service;
 
-import com.daemonsets.resumeportal.models.UserProfile;
+import com.daemonsets.resumeportal.cache.PublicResumeCacheService;
+import com.daemonsets.resumeportal.model.UserProfile;
+import com.daemonsets.resumeportal.repository.UserProfileRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

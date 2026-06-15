@@ -1,7 +1,9 @@
-package com.daemonsets.resumeportal;
+package com.daemonsets.resumeportal.service;
 
-import com.daemonsets.resumeportal.models.User;
-import com.daemonsets.resumeportal.models.UserProfile;
+import com.daemonsets.resumeportal.model.User;
+import com.daemonsets.resumeportal.model.UserProfile;
+import com.daemonsets.resumeportal.repository.UserProfileRepository;
+import com.daemonsets.resumeportal.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;

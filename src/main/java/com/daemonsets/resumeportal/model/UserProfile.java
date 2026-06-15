@@ -1,4 +1,4 @@
-package com.daemonsets.resumeportal.models;
+package com.daemonsets.resumeportal.model;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

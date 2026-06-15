@@ -1,8 +1,8 @@
-package com.daemonsets.resumeportal;
+package com.daemonsets.resumeportal.service;
 
-import com.daemonsets.resumeportal.models.Education;
-import com.daemonsets.resumeportal.models.Job;
-import com.daemonsets.resumeportal.models.UserProfile;
+import com.daemonsets.resumeportal.model.Education;
+import com.daemonsets.resumeportal.model.Job;
+import com.daemonsets.resumeportal.model.UserProfile;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;

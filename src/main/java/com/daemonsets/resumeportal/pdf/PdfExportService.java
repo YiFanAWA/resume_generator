@@ -1,6 +1,6 @@
-package com.daemonsets.resumeportal;
+package com.daemonsets.resumeportal.pdf;
 
-import com.daemonsets.resumeportal.models.UserProfile;
+import com.daemonsets.resumeportal.model.UserProfile;
 import com.openhtmltopdf.extend.FSStream;
 import com.openhtmltopdf.extend.FSStreamFactory;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;

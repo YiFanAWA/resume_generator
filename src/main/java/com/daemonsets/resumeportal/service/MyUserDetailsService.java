@@ -1,4 +1,4 @@
-package com.daemonsets.resumeportal;
+package com.daemonsets.resumeportal.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -6,8 +6,9 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import com.daemonsets.resumeportal.models.MyUserDetails;
-import com.daemonsets.resumeportal.models.User;
+import com.daemonsets.resumeportal.model.MyUserDetails;
+import com.daemonsets.resumeportal.model.User;
+import com.daemonsets.resumeportal.repository.UserRepository;
 
 import java.util.Optional;
 

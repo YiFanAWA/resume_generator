@@ -1,4 +1,4 @@
-package com.daemonsets.resumeportal;
+package com.daemonsets.resumeportal.pdf;
 
 import lombok.Getter;
 import lombok.Setter;

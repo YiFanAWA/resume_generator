@@ -1,4 +1,4 @@
-package com.daemonsets.resumeportal;
+package com.daemonsets.resumeportal.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -1,4 +1,4 @@
-package com.daemonsets.resumeportal.models;
+package com.daemonsets.resumeportal.model;
 
 import jakarta.persistence.*;
 

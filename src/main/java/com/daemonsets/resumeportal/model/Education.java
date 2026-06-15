@@ -1,27 +1,29 @@
-package com.daemonsets.resumeportal.models;
+package com.daemonsets.resumeportal.model;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
-public class Job {
+@AllArgsConstructor
+public class Education {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-    private String company;
-    private String designation;
+
+    private String college;
+    private String qualification;
 
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;
@@ -29,11 +31,8 @@ public class Job {
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
 
-    private boolean isCurrentJob;
-
-    @ElementCollection(targetClass = String.class)
-    @Column(name = "responsibilities", columnDefinition = "TEXT")
-    private List<String> responsibilities = new ArrayList<>();
+    @Column(columnDefinition = "TEXT")
+    private String summary;
 
     public String getFormattedStartDate() {
         return startDate != null ? startDate.format(DateTimeFormatter.ofPattern("MMM yyyy")) : null;

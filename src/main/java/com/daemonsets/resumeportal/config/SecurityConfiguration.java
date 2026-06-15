@@ -1,5 +1,6 @@
-package com.daemonsets.resumeportal;
+package com.daemonsets.resumeportal.config;
 
+import com.daemonsets.resumeportal.web.ApiErrorResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;

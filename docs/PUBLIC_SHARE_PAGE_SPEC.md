@@ -93,9 +93,10 @@ isPublic
 ## 当前实现位置
 
 - React 页面：`frontend/src/App.jsx`
-- API：`src/main/java/com/daemonsets/resumeportal/ApiController.java`
-- 缓存服务：`src/main/java/com/daemonsets/resumeportal/PublicResumeCacheService.java`
-- 旧地址兼容跳转：`src/main/java/com/daemonsets/resumeportal/HomeController.java`
+- API：`src/main/java/com/daemonsets/resumeportal/web/ApiController.java`
+- 分享业务：`src/main/java/com/daemonsets/resumeportal/service/ShareService.java`
+- 缓存服务：`src/main/java/com/daemonsets/resumeportal/cache/PublicResumeCacheService.java`
+- 旧地址兼容跳转：`src/main/java/com/daemonsets/resumeportal/web/HomeController.java`
 
 ## 缓存策略
 
